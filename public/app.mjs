@@ -20,13 +20,16 @@ const CONFIG = {
     waterRatio: 0.55,
     dryOnlyAgeWeeks: 17, // ~4 months
   },
+  camera: {
+    src: "luna-cam",
+    apiURL: "http://cam.local",
+  },
   recentWeightsCount: 5,
   countAnimationMS: 1200,
   sparkleIntervalMS: 800,
   dataRefreshMS: 30 * 1000,
   titleRotateMS: 15 * 60 * 1000,
   ageRefreshMS: 60 * 1000,
-  weatherRefreshMS: 30 * 60 * 1000,
 };
 
 const MILESTONES = [
@@ -43,35 +46,6 @@ const MILESTONES = [
 function milestoneDays(m) {
   return m.ageDays ?? m.ageWeeks * 7;
 }
-
-// WMO weather codes -> [emoji, description]
-const WMO_CODES = {
-  0:  ["☀️", "Clear sky"],
-  1:  ["🌤️", "Mainly clear"],
-  2:  ["⛅", "Partly cloudy"],
-  3:  ["☁️", "Overcast"],
-  45: ["🌫️", "Fog"],
-  48: ["🌫️", "Rime fog"],
-  51: ["🌦️", "Light drizzle"],
-  53: ["🌦️", "Drizzle"],
-  55: ["🌧️", "Dense drizzle"],
-  61: ["🌦️", "Light rain"],
-  63: ["🌧️", "Rain"],
-  65: ["🌧️", "Heavy rain"],
-  67: ["🌨️", "Freezing rain"],
-  71: ["❄️", "Light snow"],
-  73: ["❄️", "Snow"],
-  75: ["❄️", "Heavy snow"],
-  77: ["❄️", "Snow grains"],
-  80: ["🌦️", "Light showers"],
-  81: ["🌧️", "Showers"],
-  82: ["🌧️", "Heavy showers"],
-  85: ["❄️", "Snow showers"],
-  86: ["❄️", "Heavy snow showers"],
-  95: ["⛈️", "Thunderstorm"],
-  96: ["⛈️", "Thunderstorm w/ hail"],
-  99: ["⛈️", "Thunderstorm w/ heavy hail"],
-};
 
 // ============================================================
 // Age calculations (Temporal API)
@@ -471,41 +445,79 @@ async function deleteEvent(id) {
 }
 
 // ============================================================
-// Weather
+// Camera (go2rtc WebRTC)
 // ============================================================
 
-async function updateWeather() {
-  const container = document.getElementById("weather-info");
+let cameraStream;
+
+async function setupCamera() {
+  const video = document.getElementById("camera-video");
+  const feed = document.getElementById("camera-feed");
+
   try {
-    const data = await apiGet("/api/weather");
-    if (data.error) throw new Error(data.error);
+    const pc = new RTCPeerConnection({
+      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+    });
 
-    if (data.location) {
-      document.getElementById("weather-location").textContent = data.location;
-    }
+    pc.addTransceiver("video", { direction: "recvonly" });
+    pc.addTransceiver("audio", { direction: "recvonly" });
 
-    const cur = data.current;
-    const code = cur.weather_code;
-    const [icon, desc] = WMO_CODES[code] || ["🌤️", "Unknown"];
-    const high = Math.round(data.daily.temperature_2m_max[0]);
-    const low = Math.round(data.daily.temperature_2m_min[0]);
+    pc.ontrack = (event) => {
+      if (event.track.kind === "video") {
+        video.srcObject = event.streams[0];
+        cameraStream = event.streams[0];
+      }
+    };
 
-    container.innerHTML =
-      '<div class="weather-current">' +
-        '<span class="weather-icon">' + icon + '</span>' +
-        '<div>' +
-          '<div class="weather-temp">' + Math.round(cur.temperature_2m) + NNBSP + '°C</div>' +
-          '<div class="weather-desc">' + desc + '</div>' +
-        '</div>' +
-      '</div>' +
-      '<div class="weather-details">' +
-        '<div>Feels like ' + Math.round(cur.apparent_temperature) + NNBSP + '°C</div>' +
-        '<div>High ' + high + '° / Low ' + low + '°</div>' +
-        '<div>Humidity ' + cur.relative_humidity_2m + '%</div>' +
-      '</div>';
-  } catch {
-    container.innerHTML = '<div class="weather-error">Could not load weather</div>';
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+
+    // Wait for ICE candidates to be gathered
+    await new Promise((resolve) => {
+      if (pc.iceGatheringState === "complete") return resolve();
+      pc.addEventListener("icegatheringstatechange", () => {
+        if (pc.iceGatheringState === "complete") resolve();
+      });
+    });
+
+    const resp = await fetch(
+      CONFIG.camera.apiURL + "/api/webrtc?src=" + CONFIG.camera.src,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/sdp" },
+        body: pc.localDescription.sdp,
+      },
+    );
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+
+    const sdp = await resp.text();
+    await pc.setRemoteDescription(new RTCSessionDescription({ type: "answer", sdp }));
+  } catch (err) {
+    console.error("Camera setup failed:", err);
+    feed.innerHTML = '<div class="camera-error">Could not connect to camera</div>';
   }
+}
+
+function setupCameraLightbox() {
+  const lightbox = document.getElementById("camera-lightbox");
+  const lightboxVideo = document.getElementById("camera-lightbox-video");
+
+  function open() {
+    if (!cameraStream) return;
+    lightboxVideo.srcObject = cameraStream;
+    lightbox.showModal();
+  }
+
+  lightbox.addEventListener("close", () => {
+    lightboxVideo.srcObject = null;
+  });
+
+  lightbox.addEventListener("click", (e) => {
+    if (e.target === lightbox) lightbox.close();
+  });
+
+  document.getElementById("camera-feed").addEventListener("click", open);
+  document.getElementById("camera-expand").addEventListener("click", open);
 }
 
 // ============================================================
@@ -753,11 +765,12 @@ updateMilestones();
 updateFood();
 setupForms();
 setupPottyButtons();
+setupCameraLightbox();
 
 await Promise.all([
   loadWeights(),
   loadEvents(),
-  updateWeather(),
+  setupCamera(),
   loadPottyLog(),
 ]);
 
@@ -766,8 +779,6 @@ setInterval(() => {
   updateFood();
   renderPottyPatterns();
 }, CONFIG.ageRefreshMS);
-
-setInterval(updateWeather, CONFIG.weatherRefreshMS);
 
 setInterval(() => {
   loadWeights();

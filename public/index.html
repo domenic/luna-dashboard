@@ -75,9 +75,11 @@
           </form>
         </section>
 
-        <section class="card weather">
-          <h2>Weather <span class="weather-location" id="weather-location"></span></h2>
-          <div id="weather-info"></div>
+        <section class="card camera">
+          <h2>Camera <button class="camera-expand" id="camera-expand">⛶</button></h2>
+          <div class="camera-feed" id="camera-feed">
+            <video id="camera-video" autoplay muted playsinline></video>
+          </div>
         </section>
       </div>
     </div>
@@ -100,6 +102,9 @@
       </section>
     </div>
   </div>
+  <dialog class="camera-lightbox" id="camera-lightbox">
+    <video id="camera-lightbox-video" autoplay muted playsinline></video>
+  </dialog>
   <script type="module" src="app.mjs"></script>
 </body>
 </html>

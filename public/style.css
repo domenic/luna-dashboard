@@ -488,54 +488,67 @@ body {
   }
 }
 
-/* Weather */
+/* Camera */
 
-.weather {
+.camera {
   flex: 1;
 }
 
-.weather-location {
-  font-weight: 400;
-  font-size: 0.75rem;
-  opacity: 0.7;
-  text-transform: none;
-  letter-spacing: 0;
-}
-
-.weather-current {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.5rem;
-}
-
-.weather-icon {
-  font-size: 2rem;
-  line-height: 1;
-}
-
-.weather-temp {
-  font-size: 1.8rem;
-  font-weight: 700;
-}
-
-.weather-desc {
-  font-size: 0.8rem;
+.camera-expand {
+  background: none;
+  border: none;
   color: var(--text-dim);
-}
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0;
 
-.weather-details {
-  font-size: 0.8rem;
-  color: var(--text-dim);
-
-  div {
-    padding: 0.1rem 0;
+  &:hover {
+    color: var(--text);
   }
 }
 
-.weather-error {
+.camera-feed {
+  flex: 1;
+  min-height: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #000;
+  cursor: pointer;
+
+  video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+}
+
+.camera-error {
   color: var(--text-dim);
   font-style: italic;
+  padding: 2rem;
+  text-align: center;
+}
+
+.camera-lightbox {
+  border: none;
+  background: transparent;
+  padding: 0;
+  max-width: 100vw;
+  max-height: 100vh;
+  margin: auto;
+  cursor: pointer;
+
+  &::backdrop {
+    background: rgb(0 0 0 / 0.92);
+  }
+
+  video {
+    max-width: 100vw;
+    max-height: 100vh;
+    display: block;
+    cursor: default;
+  }
 }
 
 /* Forms */
@@ -889,10 +902,10 @@ body {
   .hero { order: 0; }
   .food { order: 1; }
   .potty { order: 2; }
-  .events { order: 3; max-height: none; }
-  .milestones { order: 4; min-height: auto; }
-  .weight { order: 5; min-height: 200px; }
-  .weather { order: 6; }
+  .camera { order: 3; min-height: 200px; }
+  .events { order: 4; max-height: none; }
+  .milestones { order: 5; min-height: auto; }
+  .weight { order: 6; min-height: 200px; }
 
   .event-delete {
     opacity: 1;

@@ -97,50 +97,6 @@ app.delete("/api/potty/:id", async (c) => {
   return c.json(data.pottyLog);
 });
 
-// Weather proxy (Open-Meteo)
-const WEATHER_LAT = process.env.WEATHER_LAT;
-const WEATHER_LON = process.env.WEATHER_LON;
-const WEATHER_URL = "https://api.open-meteo.com/v1/forecast"
-  + "?latitude=" + WEATHER_LAT + "&longitude=" + WEATHER_LON
-  + "&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code"
-  + "&daily=temperature_2m_max,temperature_2m_min"
-  + "&timezone=Asia%2FTokyo&forecast_days=1";
-
-let weatherLocation;
-async function getWeatherLocation() {
-  if (weatherLocation !== undefined) return weatherLocation;
-  try {
-    const url = "https://nominatim.openstreetmap.org/reverse?lat=" + WEATHER_LAT
-      + "&lon=" + WEATHER_LON + "&format=json&zoom=14&accept-language=en";
-    const resp = await fetch(url, {
-      headers: { "User-Agent": "luna-dashboard/1.0" },
-    });
-    const data = await resp.json();
-    const a = data.address;
-    weatherLocation = a.neighbourhood || a.suburb || a.town || a.city || "";
-    if (a.city_district || a.city) {
-      const district = a.city_district || a.city;
-      if (district !== weatherLocation) weatherLocation += ", " + district;
-    }
-  } catch {
-    weatherLocation = "";
-  }
-  return weatherLocation;
-}
-
-app.get("/api/weather", async (c) => {
-  try {
-    const [resp, location] = await Promise.all([fetch(WEATHER_URL), getWeatherLocation()]);
-    if (!resp.ok) throw new Error("HTTP " + resp.status);
-    const weather = await resp.json();
-    weather.location = location;
-    return c.json(weather);
-  } catch (err) {
-    console.error("Weather fetch failed:", err);
-    return c.json({ error: "Failed to fetch weather" }, 502);
-  }
-});
-
 // Static files
 app.use("/*", serveStatic({ root: "./public" }));
 
