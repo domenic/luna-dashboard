@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Luna Dashboard</title>
+  <meta name="theme-color" content="#eaa954">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-512.webp">
+  <link rel="apple-touch-icon" href="icon-512.webp">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="dashboard">
+    <div class="left-col">
+      <div class="top-panels">
+      <section class="card hero">
+        <div class="photo-frame">
+          <img src="luna.jpg" alt="Luna">
+        </div>
+        <div class="age-info">
+          <h1><span class="name-glow">Luna</span> <span class="name-title" id="name-title"></span></h1>
+          <div class="age-stats">
+            <div class="age-stat">
+              <span class="age-num" id="age-days"></span>
+              <span class="age-unit">days</span>
+            </div>
+            <span class="age-sep">=</span>
+            <div class="age-stat">
+              <span class="age-num" id="age-weeks"></span>
+              <span class="age-unit">weeks</span>
+            </div>
+            <span class="age-sep">=</span>
+            <div class="age-stat">
+              <span class="age-num" id="age-months"></span>
+              <span class="age-unit">months</span>
+            </div>
+          </div>
+          <div class="accident-tracker" id="accident-tracker"></div>
+        </div>
+        <p class="next-milestone" id="next-milestone"></p>
+      </section>
+
+      <section class="card potty">
+        <h2>Potty Diary</h2>
+        <div class="potty-actions">
+          <button class="potty-btn potty-btn-pee" id="potty-pee">💧 Pee</button>
+          <button class="potty-btn potty-btn-poop" id="potty-poop">💩 Poop</button>
+        </div>
+        <div class="potty-options">
+          <label class="potty-accident-label"><input type="checkbox" id="potty-accident"> Accident</label>
+          <input type="text" id="potty-note" placeholder="Note (optional)">
+        </div>
+        <div class="potty-patterns" id="potty-patterns"></div>
+        <div class="potty-log" id="potty-log"></div>
+      </section>
+      </div>
+
+      <div class="bottom-panels">
+        <section class="card food">
+          <h2>Daily Food</h2>
+          <div id="food-info"></div>
+        </section>
+
+        <section class="card weight">
+          <h2>Weight</h2>
+          <div class="weight-chart-container">
+            <canvas id="weight-chart"></canvas>
+          </div>
+          <div class="weight-entries" id="weight-entries"></div>
+          <form class="add-form" id="weight-form">
+            <input type="date" id="weight-date" required>
+            <input type="number" id="weight-grams" placeholder="grams" required min="0" step="1">
+            <button type="submit">+</button>
+          </form>
+        </section>
+
+        <section class="card weather">
+          <h2>Weather <span class="weather-location" id="weather-location"></span></h2>
+          <div id="weather-info"></div>
+        </section>
+      </div>
+    </div>
+
+    <div class="right-col">
+      <section class="card milestones">
+        <h2>Milestones</h2>
+        <div class="timeline" id="timeline"></div>
+      </section>
+
+      <section class="card events">
+        <h2>Upcoming</h2>
+        <div class="events-list" id="events-list"></div>
+        <form class="add-form" id="event-form">
+          <input type="text" id="event-title" placeholder="Event title" required>
+          <div class="date-button" id="event-date-wrapper"><div class="date-button-face">📅</div><input type="date" id="event-date" required></div>
+          <label class="approx-label" title="Approximate date"><input type="checkbox" id="event-approx"> ~</label>
+          <button type="submit">+</button>
+        </form>
+      </section>
+    </div>
+  </div>
+  <script type="module" src="app.mjs"></script>
+</body>
+</html>

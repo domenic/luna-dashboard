@@ -1,0 +1,11 @@
+{
+  "name": "Luna Dashboard",
+  "short_name": "Luna",
+  "start_url": "/",
+  "display": "fullscreen",
+  "background_color": "#0d1117",
+  "theme_color": "#eaa954",
+  "icons": [
+    { "src": "icon-512.webp", "sizes": "512x512", "type": "image/webp" }
+  ]
+}

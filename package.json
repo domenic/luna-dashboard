@@ -1,0 +1,11 @@
+{
+  "name": "luna-dashboard",
+  "private": true,
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server.mjs"
+  },
+  "dependencies": {
+    "hono": "^4.7.0",
+    "@hono/node-server": "^1.14.0"
+  }
+}

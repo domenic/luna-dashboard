@@ -1,0 +1,923 @@
+:root {
+  --bg: #0d1117;
+  --card-bg: #161b22;
+  --card-border: #30363d;
+  --text: #e6edf3;
+  --text-dim: #8b949e;
+  --accent: #f0a87a;
+  --blue: #58a6ff;
+  --green: #3fb950;
+  --red: #f85149;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, sans-serif;
+  overflow: hidden;
+
+  &::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: url("luna.jpg") center / cover no-repeat;
+    opacity: 0.1;
+    pointer-events: none;
+    z-index: -1;
+  }
+}
+
+/*
+  Layout: two columns.
+  Left (60%): hero on top (big), then food | weight | weather in a compact row.
+  Right (40%): milestones (tall), events below.
+*/
+.dashboard {
+  display: grid;
+  grid-template-columns: 3fr 1.5fr;
+  grid-template-rows: 1fr auto;
+  gap: 1rem;
+  padding: 1rem;
+  height: 100vh;
+}
+
+.left-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: 1fr 200px;
+  gap: 1rem;
+  min-height: 0;
+
+  .top-panels, .bottom-panels {
+    display: contents;
+  }
+}
+
+.right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 0;
+}
+
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 1.25rem;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+
+  h2 {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+}
+
+/* Hero */
+
+.hero {
+  grid-column: 1 / 3;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: 1fr auto auto;
+  gap: 0.25rem 1.5rem;
+  align-items: center;
+  min-height: 0;
+  position: relative;
+  overflow: visible;
+}
+
+.next-milestone {
+  grid-column: 1 / -1;
+}
+
+
+.photo-frame {
+  width: auto;
+  height: 100%;
+  aspect-ratio: 1;
+  max-width: 220px;
+  border-radius: 20px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #1e2a3a;
+  animation: wobble 6s ease-in-out infinite;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+}
+
+.age-info {
+  flex: 1;
+  min-width: 0;
+
+  h1 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 0.75rem;
+  }
+}
+
+.name-glow {
+  animation: glow 4s ease-in-out infinite;
+}
+
+@keyframes glow {
+  0%, 100% { text-shadow: 0 0 0 transparent; }
+  50% { text-shadow: 0 0 20px rgb(240 168 122 / 0.4); }
+}
+
+@keyframes wobble {
+  0%, 100% { transform: rotate(-1.5deg); }
+  50% { transform: rotate(1.5deg); }
+}
+
+@keyframes sparkle {
+  0% { opacity: 0; transform: scale(0) translate(0, 0); }
+  50% { opacity: 1; transform: scale(1) translate(var(--dx), var(--dy)); }
+  100% { opacity: 0; transform: scale(0) translate(var(--dx2), var(--dy2)); }
+}
+
+.sparkle {
+  position: absolute;
+  pointer-events: none;
+  font-size: var(--size);
+  animation: sparkle var(--duration) ease-in-out forwards;
+}
+
+.name-title {
+  font-size: 1.2rem;
+  font-weight: 400;
+  opacity: 0.5;
+}
+
+.age-stats {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.age-sep {
+  font-size: 1.5rem;
+  color: var(--text-dim);
+  opacity: 0.4;
+  margin-bottom: 1rem;
+}
+
+.age-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.age-num {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1;
+}
+
+.age-unit {
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 0.3rem;
+}
+
+.next-milestone {
+  margin-top: 0.5rem;
+  font-size: 1.1rem;
+  color: var(--text-dim);
+
+  strong {
+    color: var(--accent);
+  }
+}
+
+/* Accident tracker */
+
+.accident-tracker {
+  margin-top: 2rem;
+  font-size: 0.95rem;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+
+  .accident-count {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--green);
+  }
+
+  &.zero-days .accident-count {
+    color: var(--red);
+  }
+
+  button {
+    background: none;
+    border: 1px solid var(--card-border);
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 0.75rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--card-border);
+      color: var(--text);
+    }
+  }
+}
+
+/* Milestones */
+
+.milestones {
+  flex: 1;
+  min-height: 0;
+}
+
+.timeline {
+  flex: 1;
+  overflow-y: auto;
+  padding-left: 1rem;
+}
+
+.milestone {
+  position: relative;
+  padding: 0.5rem 0 0.5rem 1.25rem;
+  border-left: 2px solid var(--card-border);
+
+  &:last-child {
+    border-left-color: transparent;
+  }
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: -7px;
+    top: 0.65rem;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+
+  &.past {
+    opacity: 0.5;
+
+    &::before {
+      background: var(--blue);
+    }
+  }
+
+  &.next {
+    &::before {
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+    }
+  }
+
+  &.future {
+    &::before {
+      border: 2px solid var(--card-border);
+      background: var(--card-bg);
+    }
+  }
+}
+
+.milestone-label {
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.milestone-age {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+/* Events */
+
+.events {
+  flex-shrink: 0;
+  max-height: 40%;
+}
+
+.events-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.event-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--card-border);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.event-date {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+  min-width: 5.5rem;
+}
+
+.event-title {
+  flex: 1;
+  font-size: 0.9rem;
+}
+
+.event-delete {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+
+  .event-item:hover & {
+    opacity: 1;
+  }
+
+  &:hover {
+    color: var(--red);
+    background: rgb(248 81 73 / 0.1);
+  }
+}
+
+/* Food */
+
+.food {
+  flex: 1;
+}
+
+.food-total {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 0.3rem;
+
+  span {
+    font-size: 1rem;
+    color: var(--text-dim);
+    font-weight: 400;
+  }
+}
+
+.food-breakdown {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.food-component {
+  .food-amount {
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+
+  .food-label {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+  }
+}
+
+.food-note {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+/* Weight */
+
+.weight {
+  flex: 1;
+}
+
+.weight-chart-container {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+#weight-chart {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.weight-entries {
+  max-height: 3rem;
+  overflow-y: auto;
+  font-size: 0.75rem;
+}
+
+.weight .add-form {
+  flex-wrap: wrap;
+
+  input[type="date"],
+  input[type="number"] {
+    flex: 1 1 35%;
+    max-width: none;
+  }
+
+  input[type="number"] {
+    appearance: textfield;
+  }
+}
+
+.weight-entry {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.1rem 0;
+
+  .weight-entry-date {
+    color: var(--text-dim);
+    min-width: 4rem;
+  }
+
+  .weight-entry-value {
+    flex: 1;
+  }
+
+  button {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 0.7rem;
+    opacity: 0;
+    transition: opacity 0.15s;
+
+    &:hover {
+      color: var(--red);
+    }
+  }
+
+  &:hover button {
+    opacity: 1;
+  }
+}
+
+/* Weather */
+
+.weather {
+  flex: 1;
+}
+
+.weather-location {
+  font-weight: 400;
+  font-size: 0.75rem;
+  opacity: 0.7;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.weather-current {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.weather-icon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.weather-temp {
+  font-size: 1.8rem;
+  font-weight: 700;
+}
+
+.weather-desc {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.weather-details {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+
+  div {
+    padding: 0.1rem 0;
+  }
+}
+
+.weather-error {
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+/* Forms */
+
+.add-form {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  flex-shrink: 0;
+  margin-top: auto;
+  padding-top: 0.5rem;
+
+  input, button {
+    font-family: inherit;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.4rem;
+    border-radius: 6px;
+    border: 1px solid var(--card-border);
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  input {
+    min-width: 0;
+    flex: 1;
+
+    &[type="number"] {
+      max-width: 4.5rem;
+      flex: 0;
+    }
+
+    &[type="date"] {
+      flex: 0;
+    }
+
+    &::placeholder {
+      color: var(--text-dim);
+    }
+  }
+
+  button {
+    cursor: pointer;
+    background: var(--card-border);
+    font-weight: 600;
+    padding: 0.25rem 0.5rem;
+
+    &:hover {
+      background: var(--text-dim);
+      color: var(--bg);
+    }
+  }
+}
+
+.approx-label {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  flex-shrink: 0;
+
+  input {
+    width: auto;
+    flex: none;
+  }
+}
+
+/* Date picker as icon button */
+.date-button {
+  position: relative;
+  flex-shrink: 0;
+
+  input[type="date"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: default;
+    width: 100%;
+    height: 100%;
+  }
+
+  .date-button-face {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 6px;
+    border: 1px solid var(--card-border);
+    background: var(--bg);
+    font-size: 1rem;
+    cursor: default;
+    transition: background 0.15s;
+  }
+
+  &:hover .date-button-face {
+    background: var(--card-border);
+  }
+
+  &.has-date .date-button-face {
+    border-color: var(--accent);
+    background: rgb(240 168 122 / 0.15);
+  }
+}
+
+/* Potty Diary */
+
+.potty {
+  grid-column: 3;
+  min-height: 0;
+}
+
+.potty-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.potty-btn {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+
+  &:hover {
+    background: var(--card-border);
+  }
+
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+.potty-btn-pee:hover {
+  border-color: var(--blue);
+}
+
+.potty-btn-poop:hover {
+  border-color: var(--accent);
+}
+
+.potty-options {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+
+  input[type="text"] {
+    flex: 1;
+    min-width: 0;
+    font-family: inherit;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.4rem;
+    border-radius: 6px;
+    border: 1px solid var(--card-border);
+    background: var(--bg);
+    color: var(--text);
+
+    &::placeholder {
+      color: var(--text-dim);
+    }
+  }
+}
+
+.potty-accident-label {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.potty-patterns {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin-bottom: 0.5rem;
+  padding: 0.5rem;
+  background: var(--bg);
+  border-radius: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+}
+
+.potty-log {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 1rem;
+  min-height: 0;
+}
+
+.potty-entry {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.2rem 0;
+  padding-left: 0.5rem;
+  font-size: 0.8rem;
+  border-bottom: 1px solid var(--card-border);
+  border-left: 3px solid transparent;
+
+  &.potty-accident {
+    border-left-color: var(--red);
+  }
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  .potty-entry-time {
+    color: var(--text-dim);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .potty-entry-icon {
+    flex-shrink: 0;
+  }
+
+  .potty-entry-note {
+    flex: 1;
+    color: var(--text-dim);
+    font-style: italic;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  button {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 0.7rem;
+    opacity: 0;
+    transition: opacity 0.15s;
+    flex-shrink: 0;
+
+    &:hover {
+      color: var(--red);
+    }
+  }
+
+  &:hover button {
+    opacity: 1;
+  }
+}
+
+/* Medium screens */
+
+@media (max-width: 1200px) and (min-width: 769px) {
+  .left-col {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr auto 200px;
+  }
+
+  .hero {
+    grid-column: 1 / -1;
+    grid-template-columns: auto 1fr;
+  }
+
+
+  .potty {
+    grid-column: 1 / -1;
+    max-height: 200px;
+  }
+}
+
+/* Mobile */
+
+@media (max-width: 768px) {
+  body {
+    overflow: auto;
+  }
+
+  .dashboard {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .hero {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .photo-frame {
+    width: 160px;
+    height: 160px;
+    aspect-ratio: auto;
+  }
+
+  .next-milestone,
+  .accident-tracker {
+    text-align: center;
+  }
+
+  .age-info {
+    text-align: center;
+
+    h1 {
+      font-size: 2rem;
+    }
+  }
+
+  .age-stats {
+    justify-content: center;
+    gap: 0.75rem;
+  }
+
+  .age-sep {
+    font-size: 1rem;
+  }
+
+  .age-num {
+    font-size: 2.5rem;
+  }
+
+  .next-milestone {
+    font-size: 0.95rem;
+  }
+
+  .accident-tracker {
+    justify-content: center;
+  }
+
+  .dashboard {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .left-col, .right-col {
+    display: contents;
+  }
+
+  .top-panels, .bottom-panels {
+    display: contents;
+  }
+
+  .hero { order: 0; }
+  .food { order: 1; }
+  .potty { order: 2; }
+  .events { order: 3; max-height: none; }
+  .milestones { order: 4; min-height: auto; }
+  .weight { order: 5; min-height: 200px; }
+  .weather { order: 6; }
+
+  .event-delete {
+    opacity: 1;
+  }
+
+  .weight-entry button {
+    opacity: 1;
+  }
+
+  .potty-entry button {
+    opacity: 1;
+  }
+}
+
+/* Scrollbar */
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--card-border);
+  border-radius: 2px;
+}
