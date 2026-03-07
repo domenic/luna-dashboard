@@ -556,9 +556,13 @@ async function loadPottyLog() {
   renderPottyLog();
 }
 
+function entriesForDate(date) {
+  const str = date.toString();
+  return currentPottyLog.filter(e => e.time.startsWith(str));
+}
+
 function todayEntries() {
-  const todayStr = today().toString();
-  return currentPottyLog.filter(e => e.time.startsWith(todayStr));
+  return entriesForDate(today());
 }
 
 function renderPottyLog() {
@@ -609,15 +613,30 @@ function renderPottyPatterns() {
 
 function renderPottyEntries() {
   const container = document.getElementById("potty-log");
-  const entries = todayEntries().sort((a, b) => b.time.localeCompare(a.time));
+  const t = today();
+  const yesterday = t.subtract({ days: 1 });
+  const todayList = entriesForDate(t);
+  const yesterdayList = entriesForDate(yesterday);
+  const allEntries = [...todayList, ...yesterdayList].sort((a, b) => b.time.localeCompare(a.time));
 
-  if (entries.length === 0) {
+  if (allEntries.length === 0) {
     container.innerHTML = '<div style="color: var(--text-dim); font-size: 0.8rem; font-style: italic;">No entries today</div>';
     return;
   }
 
   container.innerHTML = "";
-  for (const e of entries) {
+  const todayStr = t.toString();
+  let insertedDivider = false;
+
+  for (const e of allEntries) {
+    if (!insertedDivider && !e.time.startsWith(todayStr)) {
+      insertedDivider = true;
+      const divider = document.createElement("div");
+      divider.className = "potty-divider";
+      divider.innerHTML = '<span>midnight</span>';
+      container.append(divider);
+    }
+
     const row = document.createElement("div");
     row.className = "potty-entry" + (e.accident ? " potty-accident" : "");
 

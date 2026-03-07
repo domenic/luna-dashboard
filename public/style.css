@@ -751,6 +751,23 @@ body {
   min-height: 0;
 }
 
+.potty-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  color: var(--text-dim);
+  font-size: 0.65rem;
+  letter-spacing: 0.05em;
+  opacity: 0.6;
+
+  &::before, &::after {
+    content: "";
+    flex: 1;
+    border-top: 1px dashed var(--card-border);
+  }
+}
+
 .potty-entry {
   display: flex;
   align-items: center;
