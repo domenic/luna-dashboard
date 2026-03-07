@@ -445,57 +445,21 @@ async function deleteEvent(id) {
 }
 
 // ============================================================
-// Camera (go2rtc WebRTC)
+// Camera (go2rtc <video-stream> web component)
 // ============================================================
 
-let cameraStream;
+function setupCamera() {
+  const stream = document.getElementById("camera-stream");
+  stream.src = CONFIG.camera.apiURL + "/api/ws?src=" + CONFIG.camera.src;
 
-async function setupCamera() {
-  const video = document.getElementById("camera-video");
-  const feed = document.getElementById("camera-feed");
-
-  try {
-    const pc = new RTCPeerConnection({
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-    });
-
-    pc.addTransceiver("video", { direction: "recvonly" });
-    pc.addTransceiver("audio", { direction: "recvonly" });
-
-    pc.ontrack = (event) => {
-      if (event.track.kind === "video") {
-        video.srcObject = event.streams[0];
-        cameraStream = event.streams[0];
-      }
-    };
-
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-
-    // Wait for ICE candidates to be gathered
-    await new Promise((resolve) => {
-      if (pc.iceGatheringState === "complete") return resolve();
-      pc.addEventListener("icegatheringstatechange", () => {
-        if (pc.iceGatheringState === "complete") resolve();
-      });
-    });
-
-    const resp = await fetch(
-      CONFIG.camera.apiURL + "/api/webrtc?src=" + CONFIG.camera.src,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/sdp" },
-        body: pc.localDescription.sdp,
-      },
-    );
-    if (!resp.ok) throw new Error("HTTP " + resp.status);
-
-    const sdp = await resp.text();
-    await pc.setRemoteDescription(new RTCSessionDescription({ type: "answer", sdp }));
-  } catch (err) {
-    console.error("Camera setup failed:", err);
-    feed.innerHTML = '<div class="camera-error">Could not connect to camera</div>';
-  }
+  // VideoRTC sets controls=true initially; override once the video element exists
+  new MutationObserver((_, obs) => {
+    const video = stream.querySelector("video");
+    if (video) {
+      video.controls = false;
+      obs.disconnect();
+    }
+  }).observe(stream, { childList: true, subtree: true });
 }
 
 function setupCameraLightbox() {
@@ -503,8 +467,9 @@ function setupCameraLightbox() {
   const lightboxVideo = document.getElementById("camera-lightbox-video");
 
   function open() {
-    if (!cameraStream) return;
-    lightboxVideo.srcObject = cameraStream;
+    const srcVideo = document.querySelector("#camera-stream video");
+    if (!srcVideo?.srcObject) return;
+    lightboxVideo.srcObject = srcVideo.srcObject;
     lightbox.showModal();
   }
 
@@ -786,10 +751,11 @@ setupForms();
 setupPottyButtons();
 setupCameraLightbox();
 
+setupCamera();
+
 await Promise.all([
   loadWeights(),
   loadEvents(),
-  setupCamera(),
   loadPottyLog(),
 ]);
 

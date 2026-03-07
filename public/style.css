@@ -515,11 +515,19 @@ body {
   background: #000;
   cursor: pointer;
 
-  video {
+  video-stream {
+    display: block;
     width: 100%;
     height: 100%;
-    object-fit: contain;
-    display: block;
+
+    .info { display: none; }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
   }
 }
 

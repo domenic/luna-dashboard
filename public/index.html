@@ -9,6 +9,7 @@
   <link rel="icon" href="icon-512.webp">
   <link rel="apple-touch-icon" href="icon-512.webp">
   <link rel="stylesheet" href="style.css">
+  <script type="module" src="http://cam.local/video-stream.js"></script>
 </head>
 <body>
   <div class="dashboard">
@@ -78,7 +79,7 @@
         <section class="card camera">
           <h2>Camera <button class="camera-expand" id="camera-expand">⛶</button></h2>
           <div class="camera-feed" id="camera-feed">
-            <video id="camera-video" autoplay muted playsinline></video>
+            <video-stream id="camera-stream"></video-stream>
           </div>
         </section>
       </div>
