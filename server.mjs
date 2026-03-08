@@ -90,6 +90,17 @@ app.post("/api/potty", async (c) => {
   return c.json(data.pottyLog);
 });
 
+app.patch("/api/potty/:id", async (c) => {
+  const data = await readData();
+  const entry = (data.pottyLog || []).find(e => e.id === Number(c.req.param("id")));
+  if (!entry) return c.json({ error: "Not found" }, 404);
+  const body = await c.req.json();
+  if (body.note !== undefined) entry.note = body.note || undefined;
+  if (body.time !== undefined) entry.time = body.time;
+  await writeData(data);
+  return c.json(data.pottyLog);
+});
+
 app.delete("/api/potty/:id", async (c) => {
   const data = await readData();
   data.pottyLog = (data.pottyLog || []).filter(e => e.id !== Number(c.req.param("id")));

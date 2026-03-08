@@ -91,6 +91,15 @@ async function apiPost(url, body) {
   return res.json();
 }
 
+async function apiPatch(url, body) {
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return res.json();
+}
+
 async function apiDelete(url) {
   const res = await fetch(url, { method: "DELETE" });
   return res.json();
@@ -617,13 +626,80 @@ function renderPottyEntries() {
     note.className = "potty-entry-note";
     note.textContent = e.note || "";
 
-    const btn = document.createElement("button");
-    btn.textContent = "×";
-    btn.addEventListener("click", () => deletePottyEntry(e.id));
+    // Show full note on hover only when truncated
+    if (e.note) {
+      const ro = new ResizeObserver(() => {
+        note.title = note.scrollWidth > note.clientWidth ? e.note : "";
+      });
+      ro.observe(note);
+    }
 
-    row.append(timeSpan, icon, note, btn);
+    const editBtn = document.createElement("button");
+    editBtn.className = "potty-edit";
+    editBtn.textContent = "✎";
+    editBtn.addEventListener("click", () => editPottyEntry(e, row));
+
+    const delBtn = document.createElement("button");
+    delBtn.textContent = "×";
+    delBtn.addEventListener("click", () => deletePottyEntry(e.id));
+
+    row.append(timeSpan, icon, note, editBtn, delBtn);
     container.append(row);
   }
+}
+
+function editPottyEntry(entry, row) {
+  // Replace the row content with inline edit fields
+  const noteSpan = row.querySelector(".potty-entry-note");
+  const editBtn = row.querySelector(".potty-edit");
+  const delBtn = row.querySelector("button:last-child");
+
+  const timeInput = document.createElement("input");
+  timeInput.type = "time";
+  timeInput.className = "potty-edit-time";
+  timeInput.value = entry.time.slice(11, 16);
+
+  const noteInput = document.createElement("input");
+  noteInput.type = "text";
+  noteInput.className = "potty-edit-note";
+  noteInput.value = entry.note || "";
+  noteInput.placeholder = "Note";
+
+  const saveBtn = document.createElement("button");
+  saveBtn.className = "potty-save";
+  saveBtn.textContent = "✓";
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.className = "potty-cancel";
+  cancelBtn.textContent = "×";
+
+  const timeSpan = row.querySelector(".potty-entry-time");
+  timeSpan.replaceWith(timeInput);
+  noteSpan.replaceWith(noteInput);
+  editBtn.replaceWith(saveBtn);
+  delBtn.replaceWith(cancelBtn);
+  noteInput.focus();
+
+  async function save() {
+    const datePrefix = "YYYY-MM-DDT".length;
+    const timeEnd = "YYYY-MM-DDTHH:MM".length;
+    const newTime = entry.time.slice(0, datePrefix) + timeInput.value + entry.time.slice(timeEnd);
+    const newNote = noteInput.value.trim() || undefined;
+    const patch = {};
+    if (newTime !== entry.time) patch.time = newTime;
+    if (newNote !== entry.note) patch.note = newNote;
+    if (Object.keys(patch).length > 0) {
+      currentPottyLog = await apiPatch("/api/potty/" + entry.id, patch);
+    }
+    renderPottyLog();
+  }
+
+  saveBtn.addEventListener("click", save);
+  cancelBtn.addEventListener("click", () => renderPottyLog());
+  noteInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") save();
+    if (e.key === "Escape") renderPottyLog();
+  });
 }
 
 async function deletePottyEntry(id) {
@@ -632,15 +708,33 @@ async function deletePottyEntry(id) {
 }
 
 function setupPottyButtons() {
+  const timeInput = document.getElementById("potty-time");
+  const timeToggle = document.getElementById("potty-time-toggle");
+
+  timeToggle.addEventListener("click", () => {
+    const show = timeInput.hidden;
+    timeInput.hidden = !show;
+    timeToggle.classList.toggle("active", show);
+    if (show) timeInput.focus();
+  });
+
   async function logPotty(type) {
     const noteInput = document.getElementById("potty-note");
     const accidentInput = document.getElementById("potty-accident");
     const note = noteInput.value.trim() || undefined;
     const accident = accidentInput.checked;
-    const time = now().toString({ smallestUnit: "second" });
+    let time;
+    if (timeInput.value) {
+      time = today().toString() + "T" + timeInput.value + ":00";
+    } else {
+      time = now().toString({ smallestUnit: "second" });
+    }
     currentPottyLog = await apiPost("/api/potty", { type, time, note, accident });
     noteInput.value = "";
     accidentInput.checked = false;
+    timeInput.value = "";
+    timeInput.hidden = true;
+    timeToggle.classList.remove("active");
     renderPottyLog();
   }
 
