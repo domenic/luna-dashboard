@@ -344,7 +344,7 @@ body {
   font-size: 0.8rem;
   color: var(--text-dim);
   white-space: nowrap;
-  min-width: 5.5rem;
+  min-width: 6rem;
 }
 
 .event-title {

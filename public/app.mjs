@@ -168,11 +168,16 @@ function updateMilestones() {
 
     const ageLabel = document.createElement("div");
     ageLabel.className = "milestone-age";
-    if (mWeeks >= 52) {
-      ageLabel.textContent = Math.round(mWeeks / 4.33) + " months · day " + mDays;
-    } else {
-      ageLabel.textContent = mWeeks + " weeks · day " + mDays;
+    const milestoneDate = BIRTHDAY.add({ days: mDays });
+    let text = mWeeks >= 52
+      ? Math.round(mWeeks / 4.33) + " months · day " + mDays
+      : mWeeks + " weeks · day " + mDays;
+    text += " · " + formatDate(milestoneDate);
+    if (mDays > days) {
+      const daysUntil = mDays - days;
+      text += " · in " + daysUntil + "d";
     }
+    ageLabel.textContent = text;
 
     div.append(label, ageLabel);
     container.append(div);
