@@ -811,6 +811,10 @@ function setupForms() {
   document.getElementById("event-date").addEventListener("change", (e) => {
     document.getElementById("event-date-wrapper").classList.toggle("has-date", !!e.target.value);
   });
+
+  document.getElementById("weight-date").addEventListener("change", (e) => {
+    document.getElementById("weight-date-wrapper").classList.toggle("has-date", e.target.value !== today().toString());
+  });
 }
 
 // ============================================================

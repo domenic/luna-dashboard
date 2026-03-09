@@ -72,8 +72,8 @@
           </div>
           <div class="weight-entries" id="weight-entries"></div>
           <form class="add-form" id="weight-form">
-            <input type="date" id="weight-date" required>
             <input type="number" id="weight-grams" placeholder="grams" required min="0" step="1">
+            <button type="button" class="date-button" id="weight-date-wrapper"><div class="date-button-face">📅</div><input type="date" id="weight-date" required></button>
             <button type="submit">+</button>
           </form>
         </section>
@@ -98,7 +98,7 @@
         <div class="events-list" id="events-list"></div>
         <form class="add-form" id="event-form">
           <input type="text" id="event-title" placeholder="Event title" required>
-          <div class="date-button" id="event-date-wrapper"><div class="date-button-face">📅</div><input type="date" id="event-date" required></div>
+          <button type="button" class="date-button" id="event-date-wrapper"><div class="date-button-face">📅</div><input type="date" id="event-date" required></button>
           <label class="approx-label" title="Approximate date"><input type="checkbox" id="event-approx"> ~</label>
           <button type="submit">+</button>
         </form>
