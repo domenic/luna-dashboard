@@ -298,7 +298,7 @@ function drawWeightChart(weights) {
     return;
   }
 
-  const pad = { top: 15, right: 15, bottom: 25, left: 45 };
+  const pad = { top: 10, right: 10, bottom: 10, left: 10 };
   const plotW = w - pad.left - pad.right;
   const plotH = h - pad.top - pad.bottom;
 
@@ -324,28 +324,6 @@ function drawWeightChart(weights) {
 
   const scaleX = d => pad.left + ((d - minD) / (maxD - minD)) * plotW;
   const scaleY = g => pad.top + plotH - ((g - minG) / (maxG - minG)) * plotH;
-
-  // Grid lines
-  ctx.strokeStyle = "#30363d";
-  ctx.lineWidth = 0.5;
-  for (let i = 0; i <= 4; i++) {
-    const y = pad.top + (plotH / 4) * i;
-    ctx.beginPath();
-    ctx.moveTo(pad.left, y);
-    ctx.lineTo(w - pad.right, y);
-    ctx.stroke();
-  }
-
-  // Y-axis labels
-  ctx.fillStyle = "#8b949e";
-  ctx.font = "0.7rem system-ui, sans-serif";
-  ctx.textAlign = "right";
-  ctx.textBaseline = "middle";
-  for (let i = 0; i <= 4; i++) {
-    const val = maxG - ((maxG - minG) / 4) * i;
-    const y = pad.top + (plotH / 4) * i;
-    ctx.fillText(Math.round(val) + NNBSP + "g", pad.left - 5, y);
-  }
 
   // Line
   ctx.beginPath();
@@ -374,21 +352,6 @@ function drawWeightChart(weights) {
     ctx.fill();
   }
 
-  // X-axis date labels
-  ctx.fillStyle = "#8b949e";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "top";
-  ctx.font = "0.65rem system-ui, sans-serif";
-
-  if (weights.length <= 8) {
-    for (let i = 0; i < weights.length; i++) {
-      ctx.fillText(formatDate(weights[i].date), scaleX(epochDays[i]), h - pad.bottom + 6);
-    }
-  } else {
-    ctx.fillText(formatDate(weights[0].date), scaleX(epochDays[0]), h - pad.bottom + 6);
-    ctx.textAlign = "right";
-    ctx.fillText(formatDate(weights[weights.length - 1].date), scaleX(epochDays[epochDays.length - 1]), h - pad.bottom + 6);
-  }
 }
 
 // ============================================================
@@ -885,7 +848,7 @@ setInterval(() => {
   loadPottyLog();
 }, CONFIG.dataRefreshMS);
 
-window.addEventListener("resize", () => drawWeightChart(currentWeights));
+new ResizeObserver(() => drawWeightChart(currentWeights)).observe(document.getElementById("weight-chart"));
 
 window.addEventListener("pageshow", (e) => {
   if (!e.persisted) return;
