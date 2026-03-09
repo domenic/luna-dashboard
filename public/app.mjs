@@ -458,44 +458,34 @@ async function deleteEvent(id) {
 }
 
 // ============================================================
-// Camera (go2rtc <video-stream> web component)
+// Camera (on-demand lightbox via go2rtc <video-stream>)
 // ============================================================
-
-function setupCamera() {
-  const stream = document.getElementById("camera-stream");
-  stream.src = CONFIG.camera.apiURL + "/api/ws?src=" + CONFIG.camera.src;
-
-  // VideoRTC sets controls=true initially; override once the video element exists
-  new MutationObserver((_, obs) => {
-    const video = stream.querySelector("video");
-    if (video) {
-      video.controls = false;
-      obs.disconnect();
-    }
-  }).observe(stream, { childList: true, subtree: true });
-}
 
 function setupCameraLightbox() {
   const lightbox = document.getElementById("camera-lightbox");
-  const lightboxVideo = document.getElementById("camera-lightbox-video");
+  const streamURL = CONFIG.camera.apiURL + "/api/ws?src=" + CONFIG.camera.src;
 
-  function open() {
-    const srcVideo = document.querySelector("#camera-stream video");
-    if (!srcVideo?.srcObject) return;
-    lightboxVideo.srcObject = srcVideo.srcObject;
+  document.getElementById("camera-btn").addEventListener("click", () => {
+    const loading = document.createElement("p");
+    loading.textContent = "Connecting…";
+
+    const stream = document.createElement("video-stream");
+    stream.src = streamURL;
+    stream.addEventListener("playing", () => lightbox.classList.remove("loading"), { capture: true });
+
+    lightbox.classList.add("loading");
+    lightbox.append(loading, stream);
     lightbox.showModal();
-  }
+  });
 
   lightbox.addEventListener("close", () => {
-    lightboxVideo.srcObject = null;
+    lightbox.classList.remove("loading");
+    lightbox.innerHTML = "";
   });
 
   lightbox.addEventListener("click", (e) => {
     if (e.target === lightbox) lightbox.close();
   });
-
-  document.getElementById("camera-feed").addEventListener("click", open);
-  document.getElementById("camera-expand").addEventListener("click", open);
 }
 
 // ============================================================
@@ -875,8 +865,6 @@ updateFood();
 setupForms();
 setupPottyButtons();
 setupCameraLightbox();
-
-setupCamera();
 
 await Promise.all([
   loadWeights(),

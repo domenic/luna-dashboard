@@ -110,12 +110,12 @@ body {
 
 
 .photo-frame {
+  position: relative;
   width: auto;
   height: 100%;
   aspect-ratio: 1;
   max-width: 220px;
   border-radius: 20px;
-  overflow: hidden;
   flex-shrink: 0;
   background: #1e2a3a;
   animation: wobble 6s ease-in-out infinite;
@@ -124,6 +124,7 @@ body {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    border-radius: inherit;
   }
 
 }
@@ -490,51 +491,24 @@ body {
 
 /* Camera */
 
-.camera {
-  flex: 1;
-}
-
-.camera-expand {
-  background: none;
+.camera-btn {
+  position: absolute;
+  bottom: 0.4rem;
+  right: 0.4rem;
+  background: rgb(0 0 0 / 0.5);
   border: none;
-  color: var(--text-dim);
-  font-size: 0.85rem;
-  padding: 0;
+  border-radius: 50%;
+  width: 2rem;
+  height: 2rem;
+  font-size: 0.9rem;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   &:hover {
-    color: var(--text);
+    background: rgb(0 0 0 / 0.7);
   }
-}
-
-.camera-feed {
-  flex: 1;
-  min-height: 0;
-  border-radius: 8px;
-  overflow: hidden;
-  background: #000;
-  cursor: pointer;
-
-  video-stream {
-    display: block;
-    width: 100%;
-    height: 100%;
-
-    .info { display: none; }
-
-    video {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      display: block;
-    }
-  }
-}
-
-.camera-error {
-  color: var(--text-dim);
-  font-style: italic;
-  padding: 2rem;
-  text-align: center;
 }
 
 .camera-lightbox {
@@ -550,11 +524,32 @@ body {
     background: rgb(0 0 0 / 0.92);
   }
 
-  video {
-    max-width: 100vw;
-    max-height: 100vh;
+  &.loading video-stream {
+    display: none;
+  }
+
+  &.loading p {
+    color: var(--text-dim);
+    font-size: 0.9rem;
+    padding: 3rem;
+    text-align: center;
+  }
+
+  &:not(.loading) p {
+    display: none;
+  }
+
+  video-stream {
     display: block;
-    cursor: default;
+
+    .info { display: none; }
+
+    video {
+      max-width: 100vw;
+      max-height: 100vh;
+      display: block;
+      cursor: default;
+    }
   }
 }
 
@@ -692,6 +687,7 @@ body {
 
 .potty {
   grid-column: 3;
+  grid-row: 1 / -1;
   min-height: 0;
 }
 
@@ -991,10 +987,9 @@ body {
   .hero { order: 0; }
   .food { order: 1; }
   .potty { order: 2; }
-  .camera { order: 3; min-height: 200px; }
-  .events { order: 4; max-height: none; }
-  .milestones { order: 5; min-height: auto; }
-  .weight { order: 6; min-height: 200px; }
+  .events { order: 3; max-height: none; }
+  .milestones { order: 4; min-height: auto; }
+  .weight { order: 5; min-height: 200px; }
 
   .event-delete {
     opacity: 1;
