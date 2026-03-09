@@ -35,6 +35,7 @@ const CONFIG = {
 const MILESTONES = [
   { ageDays: 73, label: "Went home!" },
   { ageWeeks: 12, label: "Human socialization window starts closing" },
+  { ageWeeks: 15, label: "Ready to go on walks outside" },
   { ageWeeks: 17, label: "Transition to dry food" },
   { ageWeeks: 18, label: "Dog socialization window starts closing" },
   { ageWeeks: 18, label: "Ensure bite inhibition" },
