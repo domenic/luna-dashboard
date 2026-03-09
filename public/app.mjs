@@ -428,14 +428,12 @@ function renderEvents() {
   for (const e of upcoming) {
     const daysUntil = now.until(e.computedDate, { largestUnit: "days" }).days;
     const daysLabel = daysUntil === 0 ? "today" : daysUntil === 1 ? "tomorrow" : "in " + daysUntil + "d";
-    const prefix = e.approximate ? "~" : "";
-
     const item = document.createElement("div");
     item.className = "event-item";
 
     const dateSpan = document.createElement("span");
     dateSpan.className = "event-date";
-    dateSpan.textContent = prefix + formatDate(e.computedDate) + " ";
+    dateSpan.textContent = formatDate(e.computedDate) + " ";
     const small = document.createElement("small");
     small.textContent = "(" + daysLabel + ")";
     dateSpan.append(small);
@@ -798,15 +796,18 @@ function setupForms() {
     e.preventDefault();
     const title = document.getElementById("event-title").value.trim();
     const date = document.getElementById("event-date").value;
-    const approximate = document.getElementById("event-approx").checked;
     if (!title || !date) return;
-    currentEvents = await apiPost("/api/events", { title, date, approximate });
+    currentEvents = await apiPost("/api/events", { title, date });
     renderEvents();
     document.getElementById("event-title").value = "";
     document.getElementById("event-date").value = "";
     document.getElementById("event-date-wrapper").classList.remove("has-date");
-    document.getElementById("event-approx").checked = false;
   });
+
+  for (const wrapper of document.querySelectorAll(".date-button")) {
+    const input = wrapper.querySelector("input[type='date']");
+    wrapper.addEventListener("click", () => input.showPicker());
+  }
 
   document.getElementById("event-date").addEventListener("change", (e) => {
     document.getElementById("event-date-wrapper").classList.toggle("has-date", !!e.target.value);
