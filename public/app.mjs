@@ -747,6 +747,26 @@ function setupPottyButtons() {
   document.getElementById("potty-poop").addEventListener("click", () => logPotty("poop"));
 }
 
+
+// ============================================================
+// Auto-reload on deploy
+// ============================================================
+
+let buildId;
+
+async function checkForDeploy() {
+  try {
+    const res = await apiGet("/api/version");
+    if (buildId && res.buildId !== buildId) {
+      location.reload();
+      return;
+    }
+    buildId = res.buildId;
+  } catch {
+    // Intentionally ignore errors, since we might be offline and don't want to reload and thus unload the app.
+  }
+}
+
 // ============================================================
 // Helpers
 // ============================================================
@@ -865,9 +885,18 @@ setInterval(() => {
 }, CONFIG.ageRefreshMS);
 
 setInterval(() => {
+  checkForDeploy();
   loadWeights();
   loadEvents();
   loadPottyLog();
 }, CONFIG.dataRefreshMS);
 
 window.addEventListener("resize", () => drawWeightChart(currentWeights));
+
+window.addEventListener("pageshow", (e) => {
+  if (!e.persisted) return;
+  checkForDeploy();
+  loadWeights().catch(() => {});
+  loadEvents().catch(() => {});
+  loadPottyLog().catch(() => {});
+});

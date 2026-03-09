@@ -6,6 +6,7 @@ import { readFile, writeFile, access } from "fs/promises";
 import { join } from "path";
 
 const DATA_PATH = process.env.DATA_PATH || join(import.meta.dirname, "data.json");
+const BUILD_ID = Date.now().toString(36);
 
 const DEFAULT_DATA = { weights: [], events: [], nextEventID: 1, pottyLog: [], nextPottyID: 1 };
 
@@ -107,6 +108,9 @@ app.delete("/api/potty/:id", async (c) => {
   await writeData(data);
   return c.json(data.pottyLog);
 });
+
+// Build ID (changes on each server restart, i.e. each deploy)
+app.get("/api/version", (c) => c.json({ buildId: BUILD_ID }));
 
 // Static files
 app.use("/*", serveStatic({ root: "./public" }));
