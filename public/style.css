@@ -90,6 +90,27 @@ body {
   }
 }
 
+.panel-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.panel-header-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0;
+  opacity: 0.5;
+  transition: opacity 0.15s;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
 /* Hero */
 
 .hero {
@@ -769,6 +790,10 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem 1rem;
+
+  & .overdue {
+    color: var(--accent);
+  }
 }
 
 .potty-log {

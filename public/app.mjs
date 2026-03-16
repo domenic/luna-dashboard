@@ -458,10 +458,8 @@ function setupCameraLightbox() {
 function deriveLastAccident() {
   const accidents = currentPottyLog.filter(e => e.accident);
   if (accidents.length === 0) return undefined;
-  return accidents
-    .map(e => Temporal.PlainDateTime.from(e.time))
-    .reduce((a, b) => Temporal.PlainDateTime.compare(a, b) > 0 ? a : b)
-    .toPlainDate();
+  const latest = accidents.reduce((a, b) => a.time > b.time ? a : b);
+  return Temporal.PlainDate.from(latest.time);
 }
 
 function renderAccidentTracker(lastDate) {
@@ -510,9 +508,66 @@ function formatDuration(dur) {
   return durationFmt.format(rounded);
 }
 
+function formatTime(plainTime) {
+  return plainTime.toLocaleString("en", { hour: "2-digit", minute: "2-digit", hour12: false });
+}
+
+function formatDate(date) {
+  return Temporal.PlainDate.from(date).toLocaleString("en", { month: "short", day: "numeric" });
+}
+
+function expectedNextPoop(rightNow) {
+  const poops = currentPottyLog
+    .filter(e => e.type === "poop")
+    .map(e => Temporal.PlainDateTime.from(e.time))
+    .sort(Temporal.PlainDateTime.compare);
+
+  if (poops.length < 2) return undefined;
+
+  const lastPoop = poops.at(-1);
+  const target = lastPoop.subtract({ hours: 24 });
+
+  let closestIdx = 0;
+  let closestDist = Infinity;
+  for (let i = 0; i < poops.length - 1; i++) {
+    const dist = Math.abs(target.until(poops[i]).total({ unit: "minutes" }));
+    if (dist < closestDist) {
+      closestIdx = i;
+      closestDist = dist;
+    }
+  }
+
+  const nextInHistory = poops[closestIdx + 1];
+  if (!nextInHistory) return undefined;
+
+  const expected = nextInHistory.toPlainTime();
+  const nowTime = rightNow.toPlainTime();
+
+  // If the expected time-of-day is before the last poop's time-of-day,
+  // it's for tomorrow (next cycle)
+  const isNextCycle = Temporal.PlainTime.compare(expected, lastPoop.toPlainTime()) <= 0;
+  const isOverdue = !isNextCycle &&
+                    Temporal.PlainTime.compare(nowTime, expected) >= 0 &&
+                    Temporal.PlainTime.compare(nowTime, lastPoop.toPlainTime()) >= 0;
+
+  let dur;
+  if (isNextCycle) {
+    const tomorrowExpected = today().add({ days: 1 }).toPlainDateTime(expected);
+    dur = rightNow.until(tomorrowExpected);
+  } else if (isOverdue) {
+    dur = expected.until(nowTime);
+  } else {
+    dur = nowTime.until(expected);
+  }
+
+  return { expected, dur, isOverdue };
+}
+
 function renderPottyPatterns() {
   const container = document.getElementById("potty-patterns");
-  const entries = todayEntries().sort((a, b) => b.time.localeCompare(a.time));
+  const entries = todayEntries()
+    .map(e => ({ type: e.type, time: Temporal.PlainDateTime.from(e.time) }))
+    .sort((a, b) => Temporal.PlainDateTime.compare(b.time, a.time));
   const rightNow = now();
 
   const lastPee = entries.find(e => e.type === "pee");
@@ -523,23 +578,33 @@ function renderPottyPatterns() {
   const parts = [];
 
   if (lastPee) {
-    parts.push("Last pee: " + formatDuration(Temporal.PlainDateTime.from(lastPee.time).until(rightNow)) + " ago");
+    parts.push("Last pee: " + formatDuration(lastPee.time.until(rightNow)) + " ago");
   }
   if (lastPoop) {
-    parts.push("Last poop: " + formatDuration(Temporal.PlainDateTime.from(lastPoop.time).until(rightNow)) + " ago");
+    parts.push("Last poop: " + formatDuration(lastPoop.time.until(rightNow)) + " ago");
   }
   if (pees.length >= 2) {
-    const sorted = pees.map(e => Temporal.PlainDateTime.from(e.time)).sort(Temporal.PlainDateTime.compare);
     let total = Temporal.Duration.from({ seconds: 0 });
-    for (let i = 1; i < sorted.length; i++) {
-      total = total.add(sorted[i - 1].until(sorted[i]));
+    for (let i = pees.length - 1; i >= 1; i--) {
+      total = total.add(pees[i].time.until(pees[i - 1].time));
     }
-    const avg = Temporal.Duration.from({ seconds: Math.round(total.total({ unit: "seconds" }) / (sorted.length - 1)) });
+    const avg = Temporal.Duration.from({ seconds: Math.round(total.total({ unit: "seconds" }) / (pees.length - 1)) });
     parts.push("Avg between pees: " + formatDuration(avg));
   }
   parts.push("Poops today: " + poopCount);
 
-  container.innerHTML = parts.map(p => "<span>" + p + "</span>").join("");
+  const nextPoop = expectedNextPoop(rightNow);
+  if (nextPoop) {
+    const timeStr = formatTime(nextPoop.expected);
+    const dur = formatDuration(nextPoop.dur);
+    if (nextPoop.isOverdue) {
+      parts.push({ html: '<span class="overdue">Expected poop: ~' + timeStr + " (" + dur + " overdue)</span>" });
+    } else {
+      parts.push("Expected poop: ~" + timeStr + " (in " + dur + ")");
+    }
+  }
+
+  container.innerHTML = parts.map(p => typeof p === "string" ? "<span>" + p + "</span>" : p.html).join("");
 }
 
 function renderPottyEntries() {
@@ -573,7 +638,7 @@ function renderPottyEntries() {
 
     const timeSpan = document.createElement("span");
     timeSpan.className = "potty-entry-time";
-    timeSpan.textContent = e.time.slice(11, 16);
+    timeSpan.textContent = formatTime(Temporal.PlainTime.from(e.time));
 
     const icon = document.createElement("span");
     icon.className = "potty-entry-icon";
@@ -614,7 +679,7 @@ function editPottyEntry(entry, row) {
   const timeInput = document.createElement("input");
   timeInput.type = "time";
   timeInput.className = "potty-edit-time";
-  timeInput.value = entry.time.slice(11, 16);
+  timeInput.value = Temporal.PlainTime.from(entry.time).toString({ smallestUnit: "minute" });
 
   const noteInput = document.createElement("input");
   noteInput.type = "text";
@@ -638,9 +703,8 @@ function editPottyEntry(entry, row) {
   noteInput.focus();
 
   async function save() {
-    const datePrefix = "YYYY-MM-DDT".length;
-    const timeEnd = "YYYY-MM-DDTHH:MM".length;
-    const newTime = entry.time.slice(0, datePrefix) + timeInput.value + entry.time.slice(timeEnd);
+    const newTime = Temporal.PlainDate.from(entry.time)
+      .toPlainDateTime(Temporal.PlainTime.from(timeInput.value)).toString();
     const newNote = noteInput.value.trim() || undefined;
     const patch = {};
     if (newTime !== entry.time) patch.time = newTime;
@@ -697,6 +761,49 @@ function setupPottyButtons() {
 
   document.getElementById("potty-pee").addEventListener("click", () => logPotty("pee"));
   document.getElementById("potty-poop").addEventListener("click", () => logPotty("poop"));
+
+  document.getElementById("potty-export").addEventListener("click", exportPottyLog);
+}
+
+const EXPORT_DAYS = 3;
+
+function exportPottyLog() {
+  const t = today();
+  const lines = [];
+
+  for (let i = 0; i < EXPORT_DAYS; i++) {
+    const date = t.subtract({ days: i });
+    const entries = entriesForDate(date).sort((a, b) => a.time.localeCompare(b.time));
+    if (entries.length === 0) continue;
+
+    lines.push("## " + date.toLocaleString("en", { weekday: "long", month: "short", day: "numeric" }));
+    lines.push("");
+    for (const e of entries) {
+      const time = formatTime(Temporal.PlainTime.from(e.time));
+      const icon = e.type === "pee" ? "💧" : "💩";
+      let line = "- " + time + " " + icon;
+      if (e.accident) line += " (accident)";
+      if (e.note) line += " — " + e.note;
+      lines.push(line);
+    }
+    lines.push("");
+  }
+
+  const text = lines.join("\n").trimEnd();
+  if (!text) return;
+
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.style.position = "fixed";
+  ta.style.opacity = "0";
+  document.body.append(ta);
+  ta.select();
+  document.execCommand("copy");
+  ta.remove();
+
+  const btn = document.getElementById("potty-export");
+  btn.textContent = "✓";
+  setTimeout(() => { btn.textContent = "📋"; }, 1500);
 }
 
 
@@ -717,14 +824,6 @@ async function checkForDeploy() {
   } catch {
     // Intentionally ignore errors, since we might be offline and don't want to reload and thus unload the app.
   }
-}
-
-// ============================================================
-// Helpers
-// ============================================================
-
-function formatDate(date) {
-  return Temporal.PlainDate.from(date).toLocaleString("en", { month: "short", day: "numeric" });
 }
 
 // ============================================================
