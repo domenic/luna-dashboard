@@ -33,6 +33,7 @@ const CONFIG = {
 };
 
 const MILESTONES = [
+  { ageDays: 0, label: "Birthday!" },
   { ageDays: 73, label: "Went home!" },
   { ageWeeks: 12, label: "Human socialization window starts closing" },
   { ageWeeks: 15, label: "Ready to go on walks outside" },
@@ -177,6 +178,9 @@ function updateMilestones() {
     if (mDays > days) {
       const daysUntil = mDays - days;
       text += " · in " + daysUntil + "d";
+    } else if (mDays < days) {
+      const daysAgo = days - mDays;
+      text += " · " + daysAgo + "d ago";
     }
     ageLabel.textContent = text;
 
@@ -936,6 +940,7 @@ await Promise.all([
 
 setInterval(() => {
   updateAge();
+  updateMilestones();
   updateFood();
   renderPottyPatterns();
 }, CONFIG.ageRefreshMS);
