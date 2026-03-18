@@ -238,6 +238,7 @@ let currentWeights = [];
 async function loadWeights() {
   currentWeights = await apiGet("/api/weights");
   renderWeights();
+  document.querySelector(".weight").classList.add("loaded");
 }
 
 function renderWeights() {
@@ -381,6 +382,7 @@ let currentEvents = [];
 async function loadEvents() {
   currentEvents = await apiGet("/api/events");
   renderEvents();
+  document.querySelector(".events").classList.add("loaded");
 }
 
 function eventToPlainDate(event) {
@@ -754,6 +756,7 @@ let currentPottyLog = [];
 async function loadPottyLog() {
   currentPottyLog = await apiGet("/api/potty");
   renderPottyLog();
+  document.querySelector(".potty").classList.add("loaded");
 }
 
 function entriesForDate(date) {
@@ -1189,11 +1192,16 @@ setupForms();
 setupPottyButtons();
 setupCameraLightbox();
 
+for (const el of document.querySelectorAll(".hero, .food, .milestones")) {
+  el.classList.add("loaded");
+}
+
 await Promise.all([
   loadWeights(),
   loadEvents(),
   loadPottyLog(),
 ]);
+
 
 setInterval(() => {
   updateAge();

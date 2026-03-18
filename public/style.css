@@ -78,6 +78,12 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  opacity: 0;
+  transition: opacity 0.3s;
+
+  &.loaded {
+    opacity: 1;
+  }
 
   h2 {
     font-size: 0.85rem;
