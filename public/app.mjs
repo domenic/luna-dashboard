@@ -279,22 +279,36 @@ function plainDateToEpochDay(isoStr) {
   return Temporal.PlainDate.from(isoStr).since("1970-01-01", { largestUnit: "days" }).days;
 }
 
-function drawWeightChart(weights) {
-  const canvas = document.getElementById("weight-chart");
+const colors = (() => {
+  const v = k => getComputedStyle(document.documentElement).getPropertyValue(k);
+  return {
+    bg: v("--bg"),
+    cardBG: v("--card-bg"),
+    cardBorder: v("--card-border"),
+    text: v("--text"),
+    textDim: v("--text-dim"),
+    accent: v("--accent"),
+    blue: v("--blue"),
+  };
+})();
+
+function prepareCanvas(canvas) {
   const ctx = canvas.getContext("2d");
   const rect = canvas.getBoundingClientRect();
-
   canvas.width = rect.width * devicePixelRatio;
   canvas.height = rect.height * devicePixelRatio;
   ctx.scale(devicePixelRatio, devicePixelRatio);
+  return { ctx, w: rect.width, h: rect.height };
+}
 
-  const w = rect.width;
-  const h = rect.height;
+function drawWeightChart(weights) {
+  const canvas = document.getElementById("weight-chart");
+  const { ctx, w, h } = prepareCanvas(canvas);
 
   ctx.clearRect(0, 0, w, h);
 
   if (weights.length === 0) {
-    ctx.fillStyle = "#8b949e";
+    ctx.fillStyle = colors.textDim;
     ctx.font = "0.9rem system-ui, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -331,7 +345,7 @@ function drawWeightChart(weights) {
 
   // Line
   ctx.beginPath();
-  ctx.strokeStyle = "#58a6ff";
+  ctx.strokeStyle = colors.blue;
   ctx.lineWidth = 2;
   ctx.lineJoin = "round";
   weights.forEach((entry, i) => {
@@ -347,11 +361,11 @@ function drawWeightChart(weights) {
     const x = scaleX(epochDays[i]);
     const y = scaleY(weights[i].grams);
     ctx.beginPath();
-    ctx.fillStyle = "#58a6ff";
+    ctx.fillStyle = colors.blue;
     ctx.arc(x, y, 4, 0, Math.PI * 2);
     ctx.fill();
     ctx.beginPath();
-    ctx.fillStyle = "#161b22";
+    ctx.fillStyle = colors.cardBG;
     ctx.arc(x, y, 2, 0, Math.PI * 2);
     ctx.fill();
   }
@@ -522,6 +536,203 @@ function renderAccidentTracker(lastDate) {
 }
 
 // ============================================================
+// Poop timing visualizations
+// ============================================================
+
+function poopData() {
+  const t = today();
+  return currentPottyLog
+    .filter(e => e.type === "poop")
+    .map(e => {
+      const dt = Temporal.PlainDateTime.from(e.time);
+      const hour = dt.hour + dt.minute / 60 + dt.second / 3600;
+      const daysAgo = Temporal.PlainDate.from(e.time).until(t, { largestUnit: "days" }).days;
+      const weight = 0.5 ** (daysAgo / 7);
+      return { hour, weight, time: e.time };
+    });
+}
+
+const TIME_LABELS = [
+  [0, "0"], [6, "6"], [12, "12"], [18, "18"],
+];
+
+function drawTimeAxis(ctx, w, h, pad) {
+  const plotW = w - pad.left - pad.right;
+  ctx.fillStyle = colors.textDim;
+  ctx.font = "9px system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  for (const [hour, label] of TIME_LABELS) {
+    const x = pad.left + (hour / 24) * plotW;
+    ctx.fillText(label, x, h - pad.bottom + 3);
+    ctx.beginPath();
+    ctx.strokeStyle = colors.cardBorder;
+    ctx.lineWidth = 1;
+    ctx.moveTo(x, pad.top);
+    ctx.lineTo(x, h - pad.bottom);
+    ctx.stroke();
+  }
+}
+
+function drawDayScatter(canvas, data) {
+  const { ctx, w, h } = prepareCanvas(canvas);
+  if (data.length === 0) return;
+
+  const pad = { top: 8, right: 8, bottom: 16, left: 28 };
+  const plotW = w - pad.left - pad.right;
+  const plotH = h - pad.top - pad.bottom;
+
+  drawTimeAxis(ctx, w, h, pad);
+
+  // Compute days-ago range
+  const t = today();
+  const oldest = data.reduce((a, b) => a.time < b.time ? a : b).time.slice(0, 10);
+  const maxDaysAgo = Temporal.PlainDate.from(oldest).until(t, { largestUnit: "days" }).days;
+
+  const scaleY = daysAgo => maxDaysAgo === 0
+    ? pad.top + plotH / 2
+    : pad.top + (daysAgo / maxDaysAgo) * plotH;
+
+  // Y-axis labels at reasonable intervals
+  const step = maxDaysAgo <= 7 ? 1 : maxDaysAgo <= 21 ? 3 : 7;
+  ctx.fillStyle = colors.textDim;
+  ctx.font = "9px system-ui, sans-serif";
+  ctx.textAlign = "right";
+  ctx.textBaseline = "middle";
+  for (let d = 0; d <= maxDaysAgo; d += step) {
+    const y = scaleY(d);
+    const label = d === 0 ? "0" : "-" + d + "d";
+    ctx.fillText(label, pad.left - 4, y);
+  }
+
+  // Dots
+  for (const { hour, weight, time } of data) {
+    const date = Temporal.PlainDate.from(time.slice(0, 10));
+    const daysAgo = date.until(t, { largestUnit: "days" }).days;
+
+    const x = pad.left + (hour / 24) * plotW;
+    const y = scaleY(daysAgo);
+
+    ctx.beginPath();
+    ctx.fillStyle = colors.accent;
+    ctx.globalAlpha = 0.03 + 0.87 * weight;
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawDensityStrip(canvas, data) {
+  const { ctx, w, h } = prepareCanvas(canvas);
+  if (data.length === 0) return;
+
+  const pad = { top: 6, right: 8, bottom: 16, left: 8 };
+  const plotW = w - pad.left - pad.right;
+  const plotH = h - pad.top - pad.bottom;
+
+  drawTimeAxis(ctx, w, h, pad);
+
+  // Weighted Gaussian KDE with wrap-around
+  const bandwidth = 1;
+  const steps = 200;
+  const totalWeight = data.reduce((s, d) => s + d.weight, 0);
+  const density = new Array(steps);
+  let maxD = 0;
+  for (let i = 0; i < steps; i++) {
+    const t = (i / steps) * 24;
+    let sum = 0;
+    for (const { hour, weight } of data) {
+      for (const offset of [-24, 0, 24]) {
+        const diff = t - (hour + offset);
+        sum += weight * Math.exp(-0.5 * (diff / bandwidth) ** 2);
+      }
+    }
+    density[i] = sum / (totalWeight * bandwidth * Math.sqrt(2 * Math.PI));
+    if (density[i] > maxD) maxD = density[i];
+  }
+
+  // Filled curve
+  const scaleX = i => pad.left + (i / steps) * plotW;
+  const scaleY = d => pad.top + plotH - (d / maxD) * plotH;
+
+  ctx.beginPath();
+  ctx.moveTo(scaleX(0), pad.top + plotH);
+  for (let i = 0; i < steps; i++) {
+    ctx.lineTo(scaleX(i), scaleY(density[i]));
+  }
+  ctx.lineTo(scaleX(steps - 1), pad.top + plotH);
+  ctx.closePath();
+  ctx.fillStyle = colors.accent;
+  ctx.globalAlpha = 0.25;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Curve stroke
+  ctx.beginPath();
+  for (let i = 0; i < steps; i++) {
+    if (i === 0) ctx.moveTo(scaleX(i), scaleY(density[i]));
+    else ctx.lineTo(scaleX(i), scaleY(density[i]));
+  }
+  ctx.strokeStyle = colors.accent;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Additive strip plot overlay
+  ctx.globalCompositeOperation = "lighter";
+  ctx.strokeStyle = colors.accent;
+  ctx.lineWidth = 2;
+  for (const { hour, weight } of data) {
+    const x = pad.left + (hour / 24) * plotW;
+    ctx.globalAlpha = 0.07 + 0.15 * weight;
+    ctx.beginPath();
+    ctx.moveTo(x, pad.top + plotH * 0.15);
+    ctx.lineTo(x, pad.top + plotH);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = "source-over";
+}
+
+const POOP_VIZ_MODES = [drawDensityStrip, drawDayScatter];
+
+let poopVizMode = 0;
+
+function renderPoopTimingViz() {
+  const canvas = document.getElementById("poop-viz-canvas");
+  POOP_VIZ_MODES[poopVizMode](canvas, poopData());
+}
+
+function renderPoopPredictorStats() {
+  const container = document.getElementById("poop-predictor-stats");
+  const entries = todayEntries()
+    .map(e => ({ type: e.type, time: Temporal.PlainDateTime.from(e.time) }))
+    .sort((a, b) => Temporal.PlainDateTime.compare(b.time, a.time));
+  const rightNow = now();
+  const poopCount = entries.filter(e => e.type === "poop").length;
+  const lastPoop = entries.find(e => e.type === "poop");
+
+  const parts = [];
+  parts.push("Poops today: " + poopCount);
+
+  if (lastPoop) {
+    parts.push("Last poop: " + formatDuration(lastPoop.time.until(rightNow)) + " ago");
+  }
+
+  const nextPoop = expectedNextPoop(rightNow);
+  if (nextPoop) {
+    const timeStr = formatTime(nextPoop.expected);
+    const dur = formatDuration(nextPoop.dur);
+    if (nextPoop.isOverdue) {
+      parts.push({ html: '<span class="overdue">Yesterday\'s poop: ~' + timeStr + " (" + dur + " overdue)</span>" });
+    } else {
+      parts.push("Yesterday's poop: ~" + timeStr + " (in " + dur + ")");
+    }
+  }
+
+  container.innerHTML = parts.map(p => typeof p === "string" ? "<span>" + p + "</span>" : p.html).join("");
+}
+
+// ============================================================
 // Potty Diary
 // ============================================================
 
@@ -543,6 +754,8 @@ function todayEntries() {
 
 function renderPottyLog() {
   renderPottyPatterns();
+  renderPoopTimingViz();
+  renderPoopPredictorStats();
   renderPottyEntries();
   renderAccidentTracker(deriveLastAccident());
 }
@@ -618,17 +831,12 @@ function renderPottyPatterns() {
   const rightNow = now();
 
   const lastPee = entries.find(e => e.type === "pee");
-  const lastPoop = entries.find(e => e.type === "poop");
   const pees = entries.filter(e => e.type === "pee");
-  const poopCount = entries.filter(e => e.type === "poop").length;
 
   const parts = [];
 
   if (lastPee) {
     parts.push("Last pee: " + formatDuration(lastPee.time.until(rightNow)) + " ago");
-  }
-  if (lastPoop) {
-    parts.push("Last poop: " + formatDuration(lastPoop.time.until(rightNow)) + " ago");
   }
   if (pees.length >= 2) {
     let total = Temporal.Duration.from({ seconds: 0 });
@@ -637,18 +845,6 @@ function renderPottyPatterns() {
     }
     const avg = Temporal.Duration.from({ seconds: Math.round(total.total({ unit: "seconds" }) / (pees.length - 1)) });
     parts.push("Avg between pees: " + formatDuration(avg));
-  }
-  parts.push("Poops today: " + poopCount);
-
-  const nextPoop = expectedNextPoop(rightNow);
-  if (nextPoop) {
-    const timeStr = formatTime(nextPoop.expected);
-    const dur = formatDuration(nextPoop.dur);
-    if (nextPoop.isOverdue) {
-      parts.push({ html: '<span class="overdue">Expected poop: ~' + timeStr + " (" + dur + " overdue)</span>" });
-    } else {
-      parts.push("Expected poop: ~" + timeStr + " (in " + dur + ")");
-    }
   }
 
   container.innerHTML = parts.map(p => typeof p === "string" ? "<span>" + p + "</span>" : p.html).join("");
@@ -810,6 +1006,11 @@ function setupPottyButtons() {
   document.getElementById("potty-poop").addEventListener("click", () => logPotty("poop"));
 
   document.getElementById("potty-export").addEventListener("click", exportPottyLog);
+
+  document.getElementById("poop-viz-toggle").addEventListener("click", () => {
+    poopVizMode = (poopVizMode + 1) % POOP_VIZ_MODES.length;
+    renderPoopTimingViz();
+  });
 }
 
 const EXPORT_DAYS = 3;
@@ -996,6 +1197,7 @@ setInterval(() => {
 }, CONFIG.dataRefreshMS);
 
 new ResizeObserver(() => drawWeightChart(currentWeights)).observe(document.getElementById("weight-chart"));
+new ResizeObserver(() => renderPoopTimingViz()).observe(document.getElementById("poop-viz-canvas"));
 
 window.addEventListener("pageshow", (e) => {
   if (!e.persisted) return;
