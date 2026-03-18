@@ -473,9 +473,52 @@ function renderAccidentTracker(lastDate) {
     : "?";
 
   container.className = "accident-tracker" + (days === 0 ? " zero-days" : "");
-  container.innerHTML =
+
+  // "X days since last accident" text
+  let html =
+    '<div class="accident-text">' +
     '<span class="accident-count">' + days + '</span> day' + (days === 1 ? "" : "s") +
-    ' since last accident';
+    ' since last accident</div>';
+
+  // Streak grid: one cell per day from first potty entry to today
+  const accidents = currentPottyLog.filter(e => e.accident);
+  const countByDate = new Map();
+  for (const e of accidents) {
+    const date = e.time.slice(0, 10);
+    countByDate.set(date, (countByDate.get(date) || 0) + 1);
+  }
+
+  const firstEntry = currentPottyLog.length > 0
+    ? currentPottyLog.reduce((a, b) => a.time < b.time ? a : b).time.slice(0, 10)
+    : undefined;
+
+  if (firstEntry) {
+    // Align to Sunday start: back up to the Sunday on or before the first entry
+    const firstDate = Temporal.PlainDate.from(firstEntry);
+    const start = firstDate.subtract({ days: firstDate.dayOfWeek % 7 });
+    const end = today();
+    const totalDays = start.until(end, { largestUnit: "days" }).days + 1;
+    const weeks = Math.ceil(totalDays / 7);
+
+    html += '<div class="streak-grid">';
+    let d = start;
+    for (let i = 0; i < weeks * 7; i++) {
+      const key = d.toString();
+      const inRange = Temporal.PlainDate.compare(d, firstDate) >= 0 &&
+                      Temporal.PlainDate.compare(d, end) <= 0;
+      const count = inRange ? (countByDate.get(key) || 0) : -1;
+      const level = count < 0 ? "empty" : Math.min(count, 4);
+      const title = inRange
+        ? formatDate(d) + ": " + count + " accident" + (count === 1 ? "" : "s")
+        : "";
+      html += '<div class="streak-cell level-' + level + '"' +
+        (title ? ' title="' + title + '"' : '') + '></div>';
+      d = d.add({ days: 1 });
+    }
+    html += '</div>';
+  }
+
+  container.innerHTML = html;
 }
 
 // ============================================================

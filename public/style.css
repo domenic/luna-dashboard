@@ -245,9 +245,12 @@ body {
   margin-top: 2rem;
   font-size: 0.95rem;
   color: var(--text-dim);
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
+
+  .accident-text {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
 
   .accident-count {
     font-size: 1.5rem;
@@ -272,6 +275,44 @@ body {
       background: var(--card-border);
       color: var(--text);
     }
+  }
+}
+
+.streak-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 14px);
+  grid-auto-rows: 14px;
+  gap: 3px;
+  margin-top: 0.5rem;
+}
+
+.streak-cell {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+
+  &.level-0 {
+    background: var(--card-border);
+  }
+
+  &.level-1 {
+    background: oklch(55% 0.08 55);
+  }
+
+  &.level-2 {
+    background: oklch(45% 0.1 55);
+  }
+
+  &.level-3 {
+    background: oklch(35% 0.1 55);
+  }
+
+  &.level-4 {
+    background: oklch(25% 0.08 55);
+  }
+
+  &.level-empty {
+    background: transparent;
   }
 }
 
@@ -990,7 +1031,11 @@ body {
     font-size: 0.95rem;
   }
 
-  .accident-tracker {
+  .accident-tracker .accident-text {
+    justify-content: center;
+  }
+
+  .streak-grid {
     justify-content: center;
   }
 
