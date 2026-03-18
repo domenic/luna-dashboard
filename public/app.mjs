@@ -572,6 +572,19 @@ function drawTimeAxis(ctx, w, h, pad) {
     ctx.lineTo(x, h - pad.bottom);
     ctx.stroke();
   }
+
+  // Current time marker
+  const n = Temporal.Now.plainTimeISO();
+  const nowHour = n.hour + n.minute / 60;
+  const nowX = pad.left + (nowHour / 24) * plotW;
+  ctx.beginPath();
+  ctx.strokeStyle = colors.text;
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 3]);
+  ctx.moveTo(nowX, pad.top);
+  ctx.lineTo(nowX, h - pad.bottom);
+  ctx.stroke();
+  ctx.setLineDash([]);
 }
 
 function drawDayScatter(canvas, data) {
@@ -685,7 +698,7 @@ function drawDensityStrip(canvas, data) {
     const x = pad.left + (hour / 24) * plotW;
     ctx.globalAlpha = 0.07 + 0.15 * weight;
     ctx.beginPath();
-    ctx.moveTo(x, pad.top + plotH * 0.15);
+    ctx.moveTo(x, pad.top);
     ctx.lineTo(x, pad.top + plotH);
     ctx.stroke();
   }
