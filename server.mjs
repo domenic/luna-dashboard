@@ -13,6 +13,10 @@ const DEFAULT_DATA = { weights: [], events: [], nextEventID: 1, pottyLog: [], ne
 const app = new Hono();
 
 app.use("/api/*", cors());
+app.use("/api/*", async (c, next) => {
+  await next();
+  c.header("Cache-Control", "no-cache");
+});
 
 async function readData() {
   try {
