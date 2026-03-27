@@ -465,7 +465,6 @@ body {
 .food-breakdown {
   display: flex;
   gap: 1.5rem;
-  margin-bottom: 0.5rem;
 }
 
 .food-component {
@@ -481,6 +480,7 @@ body {
 }
 
 .food-note {
+  margin-top: 0.5rem;
   font-size: 0.75rem;
   color: var(--text-dim);
   font-style: italic;

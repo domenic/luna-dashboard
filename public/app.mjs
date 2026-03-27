@@ -9,16 +9,25 @@ if (!globalThis.Temporal) {
 
 const NNBSP = "\u202F"; // narrow no-break space (SI unit separator)
 
+const DAYS_PER_MONTH = 365.25 / 12;
+
+// Royal Canin JP: Mini Indoor Puppy
+const FOOD_TABLE = {
+  ageMonths: [2, 3, 4, 5, 6, 7, 8, 9, 10],
+  dryGramsByAdultKg: {
+    2: [50, 56, 57, 57, 49, 41, 41, 40, 40],
+    4: [81, 91, 95, 95, 87, 78, 69, 68, 67],
+  },
+};
+
 const CONFIG = {
   name: "Luna",
   birthday: "2025-12-21",
   food: {
-    baseGrams: 120,
-    baseAgeWeeks: 10.5,
-    weeklyIncrease: 7.5,
-    dryRatio: 0.45,
-    waterRatio: 0.55,
-    dryOnlyAgeWeeks: 17, // ~4 months
+    expectedAdultKg: 2.7,
+    waterTaperStartDay: 95,
+    waterTaperEndDay: 122,
+    initialWaterPerDry: 55 / 45,
   },
   camera: {
     src: "luna-cam",
@@ -37,11 +46,11 @@ const MILESTONES = [
   { ageDays: 73, label: "Went home!" },
   { ageWeeks: 12, label: "Human socialization window starts closing" },
   { ageWeeks: 15, label: "Ready to go on walks outside" },
-  { ageWeeks: 17, label: "Transition to dry food" },
   { ageWeeks: 18, label: "Dog socialization window starts closing" },
   { ageWeeks: 18, label: "Ensure bite inhibition" },
   { ageWeeks: 24, label: "Spay eligible" },
   { ageWeeks: 26, label: "Adolescence begins / adult teeth fully in" },
+  { ageWeeks: 43, label: "Transition to adult food" },
   { ageWeeks: 52, label: "Fully grown" },
 ];
 
@@ -193,40 +202,73 @@ function updateMilestones() {
 // Food
 // ============================================================
 
+function lerp(a, b, t) {
+  return a + (b - a) * t;
+}
+
+function clamp(x, lo, hi) {
+  return Math.max(lo, Math.min(hi, x));
+}
+
+function interp1d(xs, ys, x) {
+  if (x <= xs[0]) return ys[0];
+  if (x >= xs.at(-1)) return ys.at(-1);
+  for (let i = 0; i < xs.length - 1; i++) {
+    if (x <= xs[i + 1]) {
+      const t = (x - xs[i]) / (xs[i + 1] - xs[i]);
+      return lerp(ys[i], ys[i + 1], t);
+    }
+  }
+  return ys.at(-1);
+}
+
+function dailyDryGrams(days) {
+  const ageMonths = days / DAYS_PER_MONTH;
+  const ages = FOOD_TABLE.ageMonths;
+  const g2 = interp1d(ages, FOOD_TABLE.dryGramsByAdultKg[2], ageMonths);
+  const g4 = interp1d(ages, FOOD_TABLE.dryGramsByAdultKg[4], ageMonths);
+  const sizeT = clamp((CONFIG.food.expectedAdultKg - 2) / (4 - 2), 0, 1);
+  return Math.round(lerp(g2, g4, sizeT));
+}
+
+function waterPerDryGram(days) {
+  const { waterTaperStartDay, waterTaperEndDay, initialWaterPerDry } = CONFIG.food;
+  if (days <= waterTaperStartDay) return initialWaterPerDry;
+  if (days >= waterTaperEndDay) return 0;
+  const t = (days - waterTaperStartDay) / (waterTaperEndDay - waterTaperStartDay);
+  return initialWaterPerDry * (1 - t);
+}
+
 function updateFood() {
-  const currentWeeks = ageWeeks();
-  const { baseGrams, baseAgeWeeks, weeklyIncrease, dryRatio, waterRatio, dryOnlyAgeWeeks } = CONFIG.food;
-  const totalGrams = Math.round(baseGrams + (currentWeeks - baseAgeWeeks) * weeklyIncrease);
+  const days = ageDays();
+  const dry = dailyDryGrams(days);
+  const water = Math.round(dry * waterPerDryGram(days));
+  const total = dry + water;
   const container = document.getElementById("food-info");
 
-  if (currentWeeks >= dryOnlyAgeWeeks) {
-    container.innerHTML =
-      '<div class="food-total">' + totalGrams + NNBSP + 'g <span>/ day</span></div>' +
-      '<div class="food-breakdown">' +
-        '<div class="food-component">' +
-          '<div class="food-amount">' + totalGrams + NNBSP + 'g</div>' +
-          '<div class="food-label">dry kibble</div>' +
-        '</div>' +
+  let html =
+    '<div class="food-total">' + dry + NNBSP + 'g <span>dry / day</span></div>' +
+    '<div class="food-breakdown">';
+
+  if (water > 0) {
+    html +=
+      '<div class="food-component">' +
+        '<div class="food-amount">' + water + NNBSP + 'g</div>' +
+        '<div class="food-label">water</div>' +
       '</div>' +
-      '<div class="food-note">Old enough for dry food only</div>';
-  } else {
-    const dry = Math.round(totalGrams * dryRatio);
-    const water = Math.round(totalGrams * waterRatio);
-    const weeksUntilDry = Math.ceil(dryOnlyAgeWeeks - currentWeeks);
-    container.innerHTML =
-      '<div class="food-total">' + totalGrams + NNBSP + 'g <span>/ day</span></div>' +
-      '<div class="food-breakdown">' +
-        '<div class="food-component">' +
-          '<div class="food-amount">' + dry + NNBSP + 'g</div>' +
-          '<div class="food-label">dry kibble</div>' +
-        '</div>' +
-        '<div class="food-component">' +
-          '<div class="food-amount">' + water + NNBSP + 'g</div>' +
-          '<div class="food-label">water</div>' +
-        '</div>' +
-      '</div>' +
-      '<div class="food-note">Switch to dry food in ~' + weeksUntilDry + ' weeks</div>';
+      '<div class="food-component">' +
+        '<div class="food-amount">' + total + NNBSP + 'g</div>' +
+        '<div class="food-label">total</div>' +
+      '</div>';
   }
+
+  html += '</div>';
+
+  if (days / DAYS_PER_MONTH >= 10) {
+    html += '<div class="food-note">Switch to adult food table</div>';
+  }
+
+  container.innerHTML = html;
 }
 
 // ============================================================
