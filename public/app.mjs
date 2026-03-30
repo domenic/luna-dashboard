@@ -1,7 +1,11 @@
+import { locales } from "./locale.mjs";
+
 if (!globalThis.Temporal) {
   const { Temporal } = await import("https://esm.sh/temporal-polyfill");
   globalThis.Temporal = Temporal;
 }
+
+const L = locales[new URLSearchParams(location.search).get("lang")] ?? locales.en;
 
 // ============================================================
 // Configuration
@@ -80,10 +84,6 @@ function ageDays() {
   return age().total({ unit: "days", relativeTo: BIRTHDAY });
 }
 
-function ageWeeks() {
-  return age().total({ unit: "weeks", relativeTo: BIRTHDAY });
-}
-
 // ============================================================
 // API helpers
 // ============================================================
@@ -149,9 +149,9 @@ function updateAge() {
   const el = document.getElementById("next-milestone");
   if (next) {
     const daysUntil = milestoneDays(next) - days;
-    el.innerHTML = "Next: <strong>" + next.label + "</strong> in " + daysUntil + " day" + (daysUntil === 1 ? "" : "s");
+    el.innerHTML = L.nextMilestone(next.label, daysUntil);
   } else {
-    el.innerHTML = "All milestones reached!";
+    el.innerHTML = L.allMilestonesReached;
   }
 }
 
@@ -181,15 +181,15 @@ function updateMilestones() {
     ageLabel.className = "milestone-age";
     const milestoneDate = BIRTHDAY.add({ days: mDays });
     let text = mWeeks >= 52
-      ? Math.round(mWeeks / 4.33) + " months · day " + mDays
-      : mWeeks + " weeks · day " + mDays;
+      ? L.months(Math.round(mWeeks / 4.33)) + " · " + L.dayCount(mDays)
+      : L.weeks(mWeeks) + " · " + L.dayCount(mDays);
     text += " · " + formatDate(milestoneDate);
     if (mDays > days) {
       const daysUntil = mDays - days;
-      text += " · in " + daysUntil + "d";
+      text += " · " + L.daysUntil(daysUntil);
     } else if (mDays < days) {
       const daysAgo = days - mDays;
-      text += " · " + daysAgo + "d ago";
+      text += " · " + L.daysAgo(daysAgo);
     }
     ageLabel.textContent = text;
 
@@ -247,25 +247,25 @@ function updateFood() {
   const container = document.getElementById("food-info");
 
   let html =
-    '<div class="food-total">' + dry + NNBSP + 'g <span>dry / day</span></div>' +
+    '<div class="food-total">' + dry + NNBSP + 'g <span>' + L.dryPerDay + '</span></div>' +
     '<div class="food-breakdown">';
 
   if (water > 0) {
     html +=
       '<div class="food-component">' +
         '<div class="food-amount">' + water + NNBSP + 'g</div>' +
-        '<div class="food-label">water</div>' +
+        '<div class="food-label">' + L.water + '</div>' +
       '</div>' +
       '<div class="food-component">' +
         '<div class="food-amount">' + total + NNBSP + 'g</div>' +
-        '<div class="food-label">total</div>' +
+        '<div class="food-label">' + L.total + '</div>' +
       '</div>';
   }
 
   html += '</div>';
 
   if (days / DAYS_PER_MONTH >= 10) {
-    html += '<div class="food-note">Switch to adult food table</div>';
+    html += '<div class="food-note">' + L.switchToAdultFood + '</div>';
   }
 
   container.innerHTML = html;
@@ -355,7 +355,7 @@ function drawWeightChart(weights) {
     ctx.font = "0.9rem system-ui, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("No data yet", w / 2, h / 2);
+    ctx.fillText(L.noDataYet, w / 2, h / 2);
     return;
   }
 
@@ -445,14 +445,14 @@ function renderEvents() {
     .sort((a, b) => Temporal.PlainDate.compare(a.computedDate, b.computedDate));
 
   if (upcoming.length === 0) {
-    container.innerHTML = '<div style="color: var(--text-dim); font-style: italic;">No upcoming events</div>';
+    container.innerHTML = '<div style="color: var(--text-dim); font-style: italic;">' + L.noUpcomingEvents + '</div>';
     return;
   }
 
   container.innerHTML = "";
   for (const e of upcoming) {
     const daysUntil = now.until(e.computedDate, { largestUnit: "days" }).days;
-    const daysLabel = daysUntil === 0 ? "today" : daysUntil === 1 ? "tomorrow" : "in " + daysUntil + "d";
+    const daysLabel = daysUntil === 0 ? L.today : daysUntil === 1 ? L.tomorrow : L.daysUntil(daysUntil);
     const item = document.createElement("div");
     item.className = "event-item";
 
@@ -492,7 +492,7 @@ function setupCameraLightbox() {
 
   document.getElementById("camera-btn").addEventListener("click", () => {
     const loading = document.createElement("p");
-    loading.textContent = "Connecting…";
+    loading.textContent = L.connecting;
 
     const stream = document.createElement("video-stream");
     stream.src = streamURL;
@@ -532,11 +532,8 @@ function renderAccidentTracker(lastDate) {
 
   container.className = "accident-tracker" + (days === 0 ? " zero-days" : "");
 
-  // "X days since last accident" text
   let html =
-    '<div class="accident-text">' +
-    '<span class="accident-count">' + days + '</span> day' + (days === 1 ? "" : "s") +
-    ' since last accident</div>';
+    '<div class="accident-text">' + L.sinceLastAccident(days) + '</div>';
 
   // Streak grid: one cell per day from first potty entry to today
   const accidents = currentPottyLog.filter(e => e.accident);
@@ -567,7 +564,7 @@ function renderAccidentTracker(lastDate) {
       const count = inRange ? (countByDate.get(key) || 0) : -1;
       const level = count < 0 ? "empty" : Math.min(count, 4);
       const title = inRange
-        ? formatDate(d) + ": " + count + " accident" + (count === 1 ? "" : "s")
+        ? formatDate(d) + ": " + L.accidents(count)
         : "";
       html += '<div class="streak-cell level-' + level + '"' +
         (title ? ' title="' + title + '"' : '') + '></div>';
@@ -658,7 +655,7 @@ function drawDayScatter(canvas, data) {
   ctx.textBaseline = "middle";
   for (let d = 0; d <= maxDaysAgo; d += step) {
     const y = scaleY(d);
-    const label = d === 0 ? "0" : "-" + d + "d";
+    const label = L.chartDaysAgo(d);
     ctx.fillText(label, pad.left - 4, y);
   }
 
@@ -769,10 +766,10 @@ function renderPoopPredictorStats() {
   const lastPoop = entries.find(e => e.type === "poop");
 
   const parts = [];
-  parts.push("Poops today: " + poopCount);
+  parts.push(L.poopsToday(poopCount));
 
   if (lastPoop) {
-    parts.push("Last poop: " + formatDuration(lastPoop.time.until(rightNow)) + " ago");
+    parts.push(L.lastPoop(formatDuration(lastPoop.time.until(rightNow))));
   }
 
   const nextPoop = expectedNextPoop(rightNow);
@@ -780,9 +777,9 @@ function renderPoopPredictorStats() {
     const timeStr = formatTime(nextPoop.expected);
     const dur = formatDuration(nextPoop.dur);
     if (nextPoop.isOverdue) {
-      parts.push({ html: '<span class="overdue">Yesterday\'s poop: ~' + timeStr + " (" + dur + " overdue)</span>" });
+      parts.push(L.yesterdayPoopOverdue(timeStr, dur));
     } else {
-      parts.push("Yesterday's poop: ~" + timeStr + " (in " + dur + ")");
+      parts.push(L.yesterdayPoop(timeStr, dur));
     }
   }
 
@@ -818,7 +815,7 @@ function renderPottyLog() {
   renderAccidentTracker(deriveLastAccident());
 }
 
-const durationFmt = new Intl.DurationFormat("en", { style: "narrow" });
+const durationFmt = new Intl.DurationFormat(L.durationLocale, { style: "narrow" });
 
 function formatDuration(dur) {
   const rounded = dur.round({ largestUnit: "hours", smallestUnit: "minutes" });
@@ -827,11 +824,11 @@ function formatDuration(dur) {
 }
 
 function formatTime(plainTime) {
-  return plainTime.toLocaleString("en", { hour: "2-digit", minute: "2-digit", hour12: false });
+  return plainTime.toLocaleString(L.timeLocale, { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
 function formatDate(date) {
-  return Temporal.PlainDate.from(date).toLocaleString("en", { month: "short", day: "numeric" });
+  return L.formatDate(date);
 }
 
 function expectedNextPoop(rightNow) {
@@ -894,7 +891,7 @@ function renderPottyPatterns() {
   const parts = [];
 
   if (lastPee) {
-    parts.push("Last pee: " + formatDuration(lastPee.time.until(rightNow)) + " ago");
+    parts.push(L.lastPee(formatDuration(lastPee.time.until(rightNow))));
   }
   if (pees.length >= 2) {
     let total = Temporal.Duration.from({ seconds: 0 });
@@ -902,7 +899,7 @@ function renderPottyPatterns() {
       total = total.add(pees[i].time.until(pees[i - 1].time));
     }
     const avg = Temporal.Duration.from({ seconds: Math.round(total.total({ unit: "seconds" }) / (pees.length - 1)) });
-    parts.push("Avg between pees: " + formatDuration(avg));
+    parts.push(L.avgBetweenPees(formatDuration(avg)));
   }
 
   container.innerHTML = parts.map(p => typeof p === "string" ? "<span>" + p + "</span>" : p.html).join("");
@@ -917,7 +914,7 @@ function renderPottyEntries() {
   const allEntries = [...todayList, ...yesterdayList].sort((a, b) => b.time.localeCompare(a.time));
 
   if (allEntries.length === 0) {
-    container.innerHTML = '<div style="color: var(--text-dim); font-size: 0.8rem; font-style: italic;">No entries today</div>';
+    container.innerHTML = '<div style="color: var(--text-dim); font-size: 0.8rem; font-style: italic;">' + L.noEntriesToday + '</div>';
     return;
   }
 
@@ -930,7 +927,7 @@ function renderPottyEntries() {
       insertedDivider = true;
       const divider = document.createElement("div");
       divider.className = "potty-divider";
-      divider.innerHTML = '<span>midnight</span>';
+      divider.innerHTML = '<span>' + L.midnight + '</span>';
       container.append(divider);
     }
 
@@ -986,7 +983,7 @@ function editPottyEntry(entry, row) {
   noteInput.type = "text";
   noteInput.className = "potty-edit-note";
   noteInput.value = entry.note || "";
-  noteInput.placeholder = "Note";
+  noteInput.placeholder = L.note;
 
   const saveBtn = document.createElement("button");
   saveBtn.className = "potty-save";
@@ -1082,7 +1079,7 @@ function exportPottyLog() {
     const entries = entriesForDate(date).sort((a, b) => a.time.localeCompare(b.time));
     if (entries.length === 0) continue;
 
-    lines.push("## " + date.toLocaleString("en", { weekday: "long", month: "short", day: "numeric" }));
+    lines.push("## " + L.formatExportDate(date));
     lines.push("");
     for (const e of entries) {
       const time = formatTime(Temporal.PlainTime.from(e.time));
@@ -1224,6 +1221,11 @@ setInterval(spawnSparkle, CONFIG.sparkleIntervalMS);
 // ============================================================
 // Top-level init
 // ============================================================
+
+const ageUnits = document.querySelectorAll(".age-unit");
+ageUnits[0].textContent = L.daysLabel;
+ageUnits[1].textContent = L.weeksLabel;
+ageUnits[2].textContent = L.monthsLabel;
 
 pickTitle();
 setInterval(pickTitle, CONFIG.titleRotateMS);
