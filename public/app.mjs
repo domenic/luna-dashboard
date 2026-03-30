@@ -880,25 +880,30 @@ function expectedNextPoop(rightNow) {
 
 function renderPottyPatterns() {
   const container = document.getElementById("potty-patterns");
-  const entries = todayEntries()
-    .map(e => ({ type: e.type, time: Temporal.PlainDateTime.from(e.time) }))
-    .sort((a, b) => Temporal.PlainDateTime.compare(b.time, a.time));
-  const rightNow = now();
-
-  const lastPee = entries.find(e => e.type === "pee");
-  const pees = entries.filter(e => e.type === "pee");
 
   const parts = [];
 
-  if (lastPee) {
-    parts.push(L.lastPee(formatDuration(lastPee.time.until(rightNow))));
-  }
-  if (pees.length >= 2) {
-    let total = Temporal.Duration.from({ seconds: 0 });
-    for (let i = pees.length - 1; i >= 1; i--) {
-      total = total.add(pees[i].time.until(pees[i - 1].time));
+  // Last pee searches the full log so it doesn't reset at midnight
+  let lastPeeTime;
+  for (const e of currentPottyLog) {
+    if (e.type === "pee" && (!lastPeeTime || e.time > lastPeeTime)) {
+      lastPeeTime = e.time;
     }
-    const avg = Temporal.Duration.from({ seconds: Math.round(total.total({ unit: "seconds" }) / (pees.length - 1)) });
+  }
+  if (lastPeeTime) {
+    parts.push(L.lastPee(formatDuration(Temporal.PlainDateTime.from(lastPeeTime).until(now()))));
+  }
+
+  const todayPees = todayEntries()
+    .filter(e => e.type === "pee")
+    .map(e => ({ type: e.type, time: Temporal.PlainDateTime.from(e.time) }))
+    .sort((a, b) => Temporal.PlainDateTime.compare(b.time, a.time));
+  if (todayPees.length >= 2) {
+    let total = Temporal.Duration.from({ seconds: 0 });
+    for (let i = todayPees.length - 1; i >= 1; i--) {
+      total = total.add(todayPees[i].time.until(todayPees[i - 1].time));
+    }
+    const avg = Temporal.Duration.from({ seconds: Math.round(total.total({ unit: "seconds" }) / (todayPees.length - 1)) });
     parts.push(L.avgBetweenPees(formatDuration(avg)));
   }
 
