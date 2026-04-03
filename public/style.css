@@ -848,6 +848,7 @@ body {
   border-radius: 6px;
   padding: 0.5rem;
   margin-bottom: 0.5rem;
+  position: relative;
 
   .poop-predictor-header {
     display: flex;
@@ -883,6 +884,21 @@ body {
     width: 100%;
     height: 80px;
     display: block;
+  }
+
+  .poop-viz-tooltip {
+    position: absolute;
+    pointer-events: none;
+    transform: translate(-50%, -100%);
+    margin-top: -6px;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 4px;
+    padding: 0.15rem 0.4rem;
+    font-size: 0.65rem;
+    color: var(--text);
+    white-space: nowrap;
+    z-index: 1;
   }
 
   .poop-predictor-stats {

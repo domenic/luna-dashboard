@@ -633,6 +633,7 @@ function drawDayScatter(canvas, data) {
   if (data.length === 0) return;
 
   const pad = { top: 8, right: 8, bottom: 16, left: 28 };
+  poopVizPad = { left: pad.left, right: pad.right, w };
   const plotW = w - pad.left - pad.right;
   const plotH = h - pad.top - pad.bottom;
 
@@ -681,6 +682,7 @@ function drawDensityStrip(canvas, data) {
   if (data.length === 0) return;
 
   const pad = { top: 6, right: 8, bottom: 16, left: 8 };
+  poopVizPad = { left: pad.left, right: pad.right, w };
   const plotW = w - pad.left - pad.right;
   const plotH = h - pad.top - pad.bottom;
 
@@ -750,6 +752,7 @@ function drawDensityStrip(canvas, data) {
 const POOP_VIZ_MODES = [drawDensityStrip, drawDayScatter];
 
 let poopVizMode = 0;
+let poopVizPad = undefined;
 
 function renderPoopTimingViz() {
   const canvas = document.getElementById("poop-viz-canvas");
@@ -1070,6 +1073,34 @@ function setupPottyButtons() {
   document.getElementById("poop-viz-toggle").addEventListener("click", () => {
     poopVizMode = (poopVizMode + 1) % POOP_VIZ_MODES.length;
     renderPoopTimingViz();
+  });
+
+  const vizCanvas = document.getElementById("poop-viz-canvas");
+  const vizTooltip = document.createElement("div");
+  vizTooltip.className = "poop-viz-tooltip";
+  vizTooltip.hidden = true;
+  vizCanvas.parentElement.appendChild(vizTooltip);
+
+  vizCanvas.addEventListener("mousemove", (e) => {
+    if (!poopVizPad) { vizTooltip.hidden = true; return; }
+    const rect = vizCanvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const { left, right, w } = poopVizPad;
+    const plotW = w - left - right;
+    const hour = ((mx - left) / plotW) * 24;
+    if (hour < 0 || hour > 24) { vizTooltip.hidden = true; return; }
+
+    const h = Math.floor(hour);
+    const m = Math.floor((hour - h) * 60);
+    const time = formatTime(new Temporal.PlainTime(h, m));
+    vizTooltip.textContent = time;
+    vizTooltip.style.left = `${vizCanvas.offsetLeft + mx}px`;
+    vizTooltip.style.top = `${vizCanvas.offsetTop}px`;
+    vizTooltip.hidden = false;
+  });
+
+  vizCanvas.addEventListener("mouseleave", () => {
+    vizTooltip.hidden = true;
   });
 }
 
