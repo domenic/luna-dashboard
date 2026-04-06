@@ -49,7 +49,7 @@ const MILESTONES = [
   { ageDays: 0, label: "Birthday!" },
   { ageDays: 73, label: "Went home!" },
   { ageWeeks: 12, label: "Human socialization window starts closing" },
-  { ageWeeks: 15, label: "Ready to go on walks outside" },
+  { ageWeeks: 16, label: "Ready to go on walks outside" },
   { ageWeeks: 18, label: "Dog socialization window starts closing" },
   { ageWeeks: 18, label: "Ensure bite inhibition" },
   { ageWeeks: 24, label: "Spay eligible" },
