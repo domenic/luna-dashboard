@@ -2,7 +2,8 @@
   "name": "luna-dashboard",
   "private": true,
   "scripts": {
-    "start": "node --env-file-if-exists=.env server.mjs"
+    "start": "node --env-file-if-exists=.env server.mjs",
+    "prepare": "curl -s -o data.json http://luna.local/data.json"
   },
   "dependencies": {
     "hono": "^4.7.0",
