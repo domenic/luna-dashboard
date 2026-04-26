@@ -113,6 +113,11 @@ app.delete("/api/potty/:id", async (c) => {
   return c.json(data.pottyLog);
 });
 
+app.get("/data.json", async (c) => {
+  const data = await readData();
+  return c.json(data);
+});
+
 // Build ID (changes on each server restart, i.e. each deploy)
 app.get("/api/version", (c) => c.json({ buildId: BUILD_ID }));
 
