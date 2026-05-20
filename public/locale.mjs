@@ -18,9 +18,8 @@ const en = {
   today: "today",
   tomorrow: "tomorrow",
   midnight: "midnight",
-  water: "water",
-  total: "total",
   dryPerDay: "dry / day",
+  kcalPerDay: "kcal / day",
   connecting: "Connecting\u2026",
 
   // Templates
@@ -33,6 +32,14 @@ const en = {
   accidents: (n) => n + " accident" + (n === 1 ? "" : "s"),
   note: "Note",
   switchToAdultFood: "Switch to adult food table",
+  oldFood: (percent) => percent + "% old",
+  newFood: (percent) => percent + "% new",
+  foodSwitchStarts: (date) => "Food switch starts " + date,
+  foodTransition: (day, totalDays, fullDate, oldKcal, newKcal) =>
+    "Smooth transition day " + day + "/" + totalDays + ". Full new food on " + fullDate +
+    ". Calories taper from old table (" + oldKcal + " kcal) to Pro Plan table (" + newKcal + " kcal).",
+  proPlanTable: (grams, kcal) =>
+    "Using Pro Plan table: " + grams + "g/day, about " + kcal + " kcal/day.",
 
   // Stats
   poopsToday: (n) => "Poops today: " + n,
@@ -78,8 +85,16 @@ const enXWaei = {
   today: "今日",
   tomorrow: "明日",
   midnight: "0時",
-  water: "水",
   dryPerDay: "dry / 日",
+  kcalPerDay: "kcal / 日",
+  oldFood: (percent) => percent + "% 旧",
+  newFood: (percent) => percent + "% 新",
+  foodSwitchStarts: (date) => "切り替え開始: " + date,
+  foodTransition: (day, totalDays, fullDate, oldKcal, newKcal) =>
+    "なめらか切替 " + day + "/" + totalDays + "日目。完全切替: " + fullDate +
+    "。カロリーは旧表(" + oldKcal + " kcal)からPro Plan表(" + newKcal + " kcal)へ移行。",
+  proPlanTable: (grams, kcal) =>
+    "Pro Plan表: " + grams + "g/日、約" + kcal + " kcal/日。",
 
   nextMilestone: (label, n) =>
     "次: <strong>" + label + "</strong> " + n + "日後",
