@@ -15,12 +15,30 @@ const NNBSP = "\u202F"; // narrow no-break space (SI unit separator)
 
 const DAYS_PER_MONTH = 365.25 / 12;
 
-// Royal Canin JP: Mini Indoor Puppy
-const FOOD_TABLE = {
+// Royal Canin JP: Mini Indoor Puppy. 396 kcal/100g.
+const OLD_FOOD_TABLE = {
+  name: "Mini Indoor Puppy",
+  kcalPerGram: 3.96,
   ageMonths: [2, 3, 4, 5, 6, 7, 8, 9, 10],
   dryGramsByAdultKg: {
     2: [50, 56, 57, 57, 49, 41, 41, 40, 40],
     4: [81, 91, 95, 95, 87, 78, 69, 68, 67],
+  },
+};
+
+// Purina Pro Plan JP: Puppy Sensitive Skin & Stomach Salmon & Aji. About 380 kcal/100g.
+const NEW_FOOD_TABLE = {
+  name: "Pro Plan puppy salmon & aji",
+  kcalPerGram: 3.8,
+  // Small-dog rows hold the 6-month amount until their adult-food switch point.
+  ageMonths: [1.5, 3, 4, 5, 6],
+  dryGramsByAdultKg: {
+    1: [50, 55, 60, 60, 60],
+    5: [60, 90, 75, 75, 75],
+  },
+  adultSwitchAgeMonthsByAdultKg: {
+    1: 9,
+    5: 12,
   },
 };
 
@@ -29,9 +47,8 @@ const CONFIG = {
   birthday: "2025-12-21",
   food: {
     expectedAdultKg: 2.7,
-    waterTaperStartDay: 95,
-    waterTaperEndDay: 122,
-    initialWaterPerDry: 55 / 45,
+    switchStartDate: "2026-05-20",
+    switchDays: 10,
   },
   camera: {
     src: "luna-cam",
@@ -54,7 +71,7 @@ const MILESTONES = [
   { ageWeeks: 18, label: "Ensure bite inhibition" },
   { ageWeeks: 24, label: "Spay eligible" },
   { ageWeeks: 26, label: "Adolescence begins / adult teeth fully in" },
-  { ageWeeks: 43, label: "Transition to adult food" },
+  { ageWeeks: 45, label: "Transition to adult food" },
   { ageWeeks: 52, label: "Fully grown" },
 ];
 
@@ -222,49 +239,130 @@ function interp1d(xs, ys, x) {
   return ys.at(-1);
 }
 
-function dailyDryGrams(days) {
+function interpolateFoodTable(table, days) {
   const ageMonths = days / DAYS_PER_MONTH;
-  const ages = FOOD_TABLE.ageMonths;
-  const g2 = interp1d(ages, FOOD_TABLE.dryGramsByAdultKg[2], ageMonths);
-  const g4 = interp1d(ages, FOOD_TABLE.dryGramsByAdultKg[4], ageMonths);
-  const sizeT = clamp((CONFIG.food.expectedAdultKg - 2) / (4 - 2), 0, 1);
-  return Math.round(lerp(g2, g4, sizeT));
+  const weights = Object.keys(table.dryGramsByAdultKg).map(Number).sort((a, b) => a - b);
+  const lowWeight = weights.findLast(w => w <= CONFIG.food.expectedAdultKg) ?? weights[0];
+  const highWeight = weights.find(w => w >= CONFIG.food.expectedAdultKg) ?? weights.at(-1);
+  const lowGrams = interp1d(table.ageMonths, table.dryGramsByAdultKg[lowWeight], ageMonths);
+  const highGrams = interp1d(table.ageMonths, table.dryGramsByAdultKg[highWeight], ageMonths);
+  const sizeT = lowWeight === highWeight
+    ? 0
+    : clamp((CONFIG.food.expectedAdultKg - lowWeight) / (highWeight - lowWeight), 0, 1);
+  return lerp(lowGrams, highGrams, sizeT);
 }
 
-function waterPerDryGram(days) {
-  const { waterTaperStartDay, waterTaperEndDay, initialWaterPerDry } = CONFIG.food;
-  if (days <= waterTaperStartDay) return initialWaterPerDry;
-  if (days >= waterTaperEndDay) return 0;
-  const t = (days - waterTaperStartDay) / (waterTaperEndDay - waterTaperStartDay);
-  return initialWaterPerDry * (1 - t);
+function adultSwitchAgeMonths() {
+  const table = NEW_FOOD_TABLE.adultSwitchAgeMonthsByAdultKg;
+  const weights = Object.keys(table).map(Number).sort((a, b) => a - b);
+  const lowWeight = weights.findLast(w => w <= CONFIG.food.expectedAdultKg) ?? weights[0];
+  const highWeight = weights.find(w => w >= CONFIG.food.expectedAdultKg) ?? weights.at(-1);
+  const sizeT = lowWeight === highWeight
+    ? 0
+    : clamp((CONFIG.food.expectedAdultKg - lowWeight) / (highWeight - lowWeight), 0, 1);
+  return lerp(table[lowWeight], table[highWeight], sizeT);
+}
+
+function oldDailyDryGrams(days) {
+  return interpolateFoodTable(OLD_FOOD_TABLE, days);
+}
+
+function newDailyDryGrams(days) {
+  return interpolateFoodTable(NEW_FOOD_TABLE, days);
+}
+
+function switchOffsetDays() {
+  const start = Temporal.PlainDate.from(CONFIG.food.switchStartDate);
+  return start.until(today()).days;
+}
+
+function fullNewFoodDate() {
+  return Temporal.PlainDate.from(CONFIG.food.switchStartDate).add({ days: CONFIG.food.switchDays - 1 });
+}
+
+function transitionShares(offsetDays) {
+  if (offsetDays < 0) return { old: 1, next: 0 };
+  if (offsetDays < CONFIG.food.switchDays) {
+    const next = (offsetDays + 1) / CONFIG.food.switchDays;
+    return { old: 1 - next, next };
+  }
+  return { old: 0, next: 1 };
+}
+
+function dailyFoodPlan(days) {
+  const offset = switchOffsetDays();
+  const shares = transitionShares(offset);
+  const oldTarget = oldDailyDryGrams(days);
+  const newTarget = newDailyDryGrams(days);
+  const oldGrams = Math.round(oldTarget * shares.old);
+  const newGrams = Math.round(newTarget * shares.next);
+  const oldKcal = oldGrams * OLD_FOOD_TABLE.kcalPerGram;
+  const newKcal = newGrams * NEW_FOOD_TABLE.kcalPerGram;
+
+  return {
+    oldGrams,
+    newGrams,
+    totalGrams: oldGrams + newGrams,
+    kcal: Math.round(oldKcal + newKcal),
+    oldTargetGrams: Math.round(oldTarget),
+    oldTargetKcal: Math.round(oldTarget * OLD_FOOD_TABLE.kcalPerGram),
+    newTargetGrams: Math.round(newTarget),
+    newTargetKcal: Math.round(newTarget * NEW_FOOD_TABLE.kcalPerGram),
+    transitionDay: offset >= 0 && offset < CONFIG.food.switchDays ? offset + 1 : undefined,
+    isBeforeSwitch: offset < 0,
+    isSwitching: offset >= 0 && offset < CONFIG.food.switchDays,
+    isFullyNew: offset >= CONFIG.food.switchDays,
+    oldPercent: Math.round(shares.old * 100),
+    newPercent: Math.round(shares.next * 100),
+  };
 }
 
 function updateFood() {
   const days = ageDays();
-  const dry = dailyDryGrams(days);
-  const water = Math.round(dry * waterPerDryGram(days));
-  const total = dry + water;
+  const plan = dailyFoodPlan(days);
   const container = document.getElementById("food-info");
 
   let html =
-    '<div class="food-total">' + dry + NNBSP + 'g <span>' + L.dryPerDay + '</span></div>' +
-    '<div class="food-breakdown">';
+    '<div class="food-total">' + plan.totalGrams + NNBSP + 'g <span>' + L.dryPerDay + '</span></div>' +
+    '<div class="food-breakdown">' +
+      '<div class="food-component">' +
+        '<div class="food-amount">' + plan.kcal + '</div>' +
+        '<div class="food-label">' + L.kcalPerDay + '</div>' +
+      '</div>';
 
-  if (water > 0) {
+  if (plan.oldGrams > 0) {
     html +=
       '<div class="food-component">' +
-        '<div class="food-amount">' + water + NNBSP + 'g</div>' +
-        '<div class="food-label">' + L.water + '</div>' +
-      '</div>' +
+        '<div class="food-amount">' + plan.oldGrams + NNBSP + 'g</div>' +
+        '<div class="food-label">' + L.oldFood(plan.oldPercent) + '</div>' +
+      '</div>';
+  }
+
+  if (plan.newGrams > 0) {
+    html +=
       '<div class="food-component">' +
-        '<div class="food-amount">' + total + NNBSP + 'g</div>' +
-        '<div class="food-label">' + L.total + '</div>' +
+        '<div class="food-amount">' + plan.newGrams + NNBSP + 'g</div>' +
+        '<div class="food-label">' + L.newFood(plan.newPercent) + '</div>' +
       '</div>';
   }
 
   html += '</div>';
 
-  if (days / DAYS_PER_MONTH >= 10) {
+  if (plan.isBeforeSwitch) {
+    html += '<div class="food-note">' + L.foodSwitchStarts(formatDate(CONFIG.food.switchStartDate)) + '</div>';
+  } else if (plan.isSwitching) {
+    html += '<div class="food-note">' + L.foodTransition(
+      plan.transitionDay,
+      CONFIG.food.switchDays,
+      formatDate(fullNewFoodDate()),
+      plan.oldTargetKcal,
+      plan.newTargetKcal,
+    ) + '</div>';
+  } else {
+    html += '<div class="food-note">' + L.proPlanTable(plan.newTargetGrams, plan.newTargetKcal) + '</div>';
+  }
+
+  if (days / DAYS_PER_MONTH >= adultSwitchAgeMonths()) {
     html += '<div class="food-note">' + L.switchToAdultFood + '</div>';
   }
 
