@@ -1071,8 +1071,17 @@ async function deletePottyEntry(id) {
 }
 
 function setupPottyButtons() {
+  const pottyContent = document.getElementById("potty-content");
+  const pottyToggle = document.getElementById("potty-toggle");
   const timeInput = document.getElementById("potty-time");
   const timeToggle = document.getElementById("potty-time-toggle");
+
+  pottyToggle.addEventListener("click", () => {
+    const expanded = pottyContent.hidden;
+    pottyContent.hidden = !expanded;
+    pottyToggle.setAttribute("aria-expanded", String(expanded));
+    pottyToggle.title = expanded ? "Collapse Potty Diary" : "Expand Potty Diary";
+  });
 
   timeToggle.addEventListener("click", () => {
     const show = timeInput.hidden;
