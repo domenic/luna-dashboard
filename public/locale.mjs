@@ -27,10 +27,6 @@ const en = {
   nextMilestone: (label, n) =>
     "Next: <strong>" + label + "</strong> in " + enDuration.format({ days: n }),
   allMilestonesReached: "All milestones reached!",
-  sinceLastAccident: (n) =>
-    '<span class="accident-count">' + n + "</span> day" + (n === 1 ? "" : "s") +
-    " since last accident",
-  accidents: (n) => n + " accident" + (n === 1 ? "" : "s"),
   note: "Note",
   switchToAdultFood: "Switch to adult food table",
   expectedAdultWeight: (weight) => "Expected adult weight: " + weight + " kg",

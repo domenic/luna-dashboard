@@ -245,83 +245,6 @@ body {
   }
 }
 
-/* Accident tracker */
-
-.accident-tracker {
-  margin-top: 2rem;
-  font-size: 0.95rem;
-  color: var(--text-dim);
-
-  .accident-text {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  .accident-count {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--green);
-  }
-
-  &.zero-days .accident-count {
-    color: var(--red);
-  }
-
-  button {
-    background: none;
-    border: 1px solid var(--card-border);
-    color: var(--text-dim);
-    font-family: inherit;
-    font-size: 0.75rem;
-    padding: 0.2rem 0.5rem;
-    border-radius: 6px;
-
-    &:hover {
-      background: var(--card-border);
-      color: var(--text);
-    }
-  }
-}
-
-.streak-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 14px);
-  grid-auto-rows: 14px;
-  gap: 3px;
-  margin-top: 0.5rem;
-}
-
-.streak-cell {
-  width: 14px;
-  height: 14px;
-  border-radius: 2px;
-
-  &.level-0 {
-    background: var(--card-border);
-  }
-
-  &.level-1 {
-    background: oklch(55% 0.08 55);
-  }
-
-  &.level-2 {
-    background: oklch(45% 0.1 55);
-  }
-
-  &.level-3 {
-    background: oklch(35% 0.1 55);
-  }
-
-  &.level-4 {
-    background: oklch(25% 0.08 55);
-  }
-
-  &.level-empty {
-    background: transparent;
-  }
-}
-
 /* Milestones */
 
 .milestones {
@@ -1096,8 +1019,7 @@ body {
     aspect-ratio: auto;
   }
 
-  .next-milestone,
-  .accident-tracker {
+  .next-milestone {
     text-align: center;
   }
 
@@ -1124,14 +1046,6 @@ body {
 
   .next-milestone {
     font-size: 0.95rem;
-  }
-
-  .accident-tracker .accident-text {
-    justify-content: center;
-  }
-
-  .streak-grid {
-    justify-content: center;
   }
 
   .dashboard {
