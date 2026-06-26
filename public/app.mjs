@@ -222,12 +222,43 @@ function interp1d(xs, ys, x) {
   return ys.at(-1);
 }
 
+// Age in days vs percentage of adult weight for toy/small dog breeds (under 5kg)
+const SMALL_DOG_GROWTH_CURVE = [
+  { days: 0, pct: 0.10 },
+  { days: 30, pct: 0.18 },
+  { days: 60, pct: 0.35 },
+  { days: 90, pct: 0.50 },
+  { days: 120, pct: 0.65 },
+  { days: 150, pct: 0.78 },
+  { days: 180, pct: 0.88 },
+  { days: 210, pct: 0.94 },
+  { days: 240, pct: 0.97 },
+  { days: 270, pct: 0.99 },
+  { days: 365, pct: 1.00 }
+];
+
+function estimateAdultWeightKg() {
+  if (!currentWeights || currentWeights.length === 0) {
+    return CONFIG.food.expectedAdultKg;
+  }
+  const latest = currentWeights.at(-1);
+  const measurementDate = Temporal.PlainDate.from(latest.date);
+  const ageAtMeasurement = BIRTHDAY.until(measurementDate).total({ unit: "days", relativeTo: BIRTHDAY });
+  
+  const ageDaysArray = SMALL_DOG_GROWTH_CURVE.map(c => c.days);
+  const pctArray = SMALL_DOG_GROWTH_CURVE.map(c => c.pct);
+  const pct = interp1d(ageDaysArray, pctArray, ageAtMeasurement);
+  
+  return (latest.grams / 1000) / pct;
+}
+
 function dailyDryGrams(days) {
   const ageMonths = days / DAYS_PER_MONTH;
   const ages = FOOD_TABLE.ageMonths;
   const g2 = interp1d(ages, FOOD_TABLE.dryGramsByAdultKg[2], ageMonths);
   const g4 = interp1d(ages, FOOD_TABLE.dryGramsByAdultKg[4], ageMonths);
-  const sizeT = clamp((CONFIG.food.expectedAdultKg - 2) / (4 - 2), 0, 1);
+  const expectedAdultKg = estimateAdultWeightKg();
+  const sizeT = clamp((expectedAdultKg - 2) / (4 - 2), 0, 1);
   return Math.round(lerp(g2, g4, sizeT));
 }
 
@@ -264,6 +295,9 @@ function updateFood() {
 
   html += '</div>';
 
+  const expectedAdultKg = estimateAdultWeightKg();
+  html += '<div class="food-note">' + L.expectedAdultWeight(expectedAdultKg.toFixed(2)) + '</div>';
+
   if (days / DAYS_PER_MONTH >= 10) {
     html += '<div class="food-note">' + L.switchToAdultFood + '</div>';
   }
@@ -280,6 +314,7 @@ let currentWeights = [];
 async function loadWeights() {
   currentWeights = await apiGet("/api/weights");
   renderWeights();
+  updateFood();
   document.querySelector(".weight").classList.add("loaded");
 }
 
@@ -316,6 +351,7 @@ function renderWeightEntries(weights) {
 async function deleteWeight(date) {
   currentWeights = await apiDelete("/api/weights/" + date);
   renderWeights();
+  updateFood();
 }
 
 function plainDateToEpochDay(isoStr) {
@@ -1179,6 +1215,7 @@ function setupForms() {
     if (!date || !grams) return;
     currentWeights = await apiPost("/api/weights", { date, grams });
     renderWeights();
+    updateFood();
     document.getElementById("weight-grams").value = "";
     document.getElementById("weight-date").value = today().toString();
   });
