@@ -33,6 +33,7 @@ const en = {
   accidents: (n) => n + " accident" + (n === 1 ? "" : "s"),
   note: "Note",
   switchToAdultFood: "Switch to adult food table",
+  expectedAdultWeight: (weight) => "Expected adult weight: " + weight + " kg",
 
   // Stats
   poopsToday: (n) => "Poops today: " + n,
@@ -80,6 +81,7 @@ const enXWaei = {
   midnight: "0時",
   water: "水",
   dryPerDay: "dry / 日",
+  expectedAdultWeight: (weight) => "予想成犬体重: " + weight + " kg",
 
   nextMilestone: (label, n) =>
     "次: <strong>" + label + "</strong> " + n + "日後",
