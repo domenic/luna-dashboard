@@ -37,37 +37,10 @@
               <span class="age-unit">months</span>
             </div>
           </div>
-          <div class="accident-tracker" id="accident-tracker"></div>
         </div>
         <p class="next-milestone" id="next-milestone"></p>
       </section>
 
-      <section class="card potty">
-        <div class="panel-header">
-          <h2>Potty Diary</h2>
-          <button type="button" class="panel-header-btn" id="potty-export" title="Copy recent log to clipboard">📋</button>
-        </div>
-        <div class="potty-actions">
-          <button class="potty-btn potty-btn-pee" id="potty-pee">💧 Pee</button>
-          <button class="potty-btn potty-btn-poop" id="potty-poop">💩 Poop</button>
-        </div>
-        <div class="potty-options">
-          <label class="potty-accident-label"><input type="checkbox" id="potty-accident"> Accident</label>
-          <button type="button" class="time-toggle" id="potty-time-toggle">🕐</button>
-          <input type="time" id="potty-time" class="potty-time-input" hidden>
-          <input type="text" id="potty-note" placeholder="Note (optional)">
-        </div>
-        <div class="potty-patterns" id="potty-patterns"></div>
-        <div class="poop-predictor" id="poop-predictor">
-          <div class="poop-predictor-header">
-            <div class="poop-viz-label">Poop Predictor</div>
-            <button type="button" class="poop-viz-toggle" id="poop-viz-toggle" title="Switch view">⇄</button>
-          </div>
-          <canvas id="poop-viz-canvas"></canvas>
-          <div class="poop-predictor-stats" id="poop-predictor-stats"></div>
-        </div>
-        <div class="potty-log" id="potty-log"></div>
-      </section>
       </div>
 
       <div class="bottom-panels">
@@ -106,6 +79,38 @@
         </form>
       </section>
     </div>
+
+    <section class="card potty">
+      <div class="panel-header">
+        <h2>Potty Diary</h2>
+        <div class="panel-header-actions">
+          <button type="button" class="panel-header-btn" id="potty-export" title="Copy recent log to clipboard">📋</button>
+          <button type="button" class="panel-header-btn potty-toggle" id="potty-toggle" title="Expand Potty Diary" aria-expanded="false" aria-controls="potty-content">▾</button>
+        </div>
+      </div>
+      <div class="potty-content" id="potty-content" hidden>
+        <div class="potty-actions">
+          <button class="potty-btn potty-btn-pee" id="potty-pee">💧 Pee</button>
+          <button class="potty-btn potty-btn-poop" id="potty-poop">💩 Poop</button>
+        </div>
+        <div class="potty-options">
+          <label class="potty-accident-label"><input type="checkbox" id="potty-accident"> Accident</label>
+          <button type="button" class="time-toggle" id="potty-time-toggle">🕐</button>
+          <input type="time" id="potty-time" class="potty-time-input" hidden>
+          <input type="text" id="potty-note" placeholder="Note (optional)">
+        </div>
+        <div class="potty-patterns" id="potty-patterns"></div>
+        <div class="poop-predictor" id="poop-predictor">
+          <div class="poop-predictor-header">
+            <div class="poop-viz-label">Poop Predictor</div>
+            <button type="button" class="poop-viz-toggle" id="poop-viz-toggle" title="Switch view">⇄</button>
+          </div>
+          <canvas id="poop-viz-canvas"></canvas>
+          <div class="poop-predictor-stats" id="poop-predictor-stats"></div>
+        </div>
+        <div class="potty-log" id="potty-log"></div>
+      </div>
+    </section>
   </div>
   <dialog class="camera-lightbox" id="camera-lightbox"></dialog>
   <script type="module" src="http://cam.local/video-stream.js"></script>

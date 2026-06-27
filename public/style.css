@@ -37,15 +37,9 @@ body {
   }
 }
 
-/*
-  Layout: two columns.
-  Left (60%): hero on top (big), then food | weight | weather in a compact row.
-  Right (40%): milestones (tall), events below.
-*/
 .dashboard {
   display: grid;
-  grid-template-columns: 3fr 1.5fr;
-  grid-template-rows: 1fr auto;
+  grid-template-columns: minmax(0, 2.4fr) minmax(260px, 1.2fr) minmax(220px, 0.9fr);
   gap: 1rem;
   padding: 1rem;
   height: 100vh;
@@ -53,7 +47,7 @@ body {
 
 .left-col {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr 200px;
   gap: 1rem;
   min-height: 0;
@@ -115,6 +109,12 @@ body {
   &:hover {
     opacity: 1;
   }
+}
+
+.panel-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
 }
 
 /* Hero */
@@ -242,83 +242,6 @@ body {
 
   strong {
     color: var(--accent);
-  }
-}
-
-/* Accident tracker */
-
-.accident-tracker {
-  margin-top: 2rem;
-  font-size: 0.95rem;
-  color: var(--text-dim);
-
-  .accident-text {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  .accident-count {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--green);
-  }
-
-  &.zero-days .accident-count {
-    color: var(--red);
-  }
-
-  button {
-    background: none;
-    border: 1px solid var(--card-border);
-    color: var(--text-dim);
-    font-family: inherit;
-    font-size: 0.75rem;
-    padding: 0.2rem 0.5rem;
-    border-radius: 6px;
-
-    &:hover {
-      background: var(--card-border);
-      color: var(--text);
-    }
-  }
-}
-
-.streak-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 14px);
-  grid-auto-rows: 14px;
-  gap: 3px;
-  margin-top: 0.5rem;
-}
-
-.streak-cell {
-  width: 14px;
-  height: 14px;
-  border-radius: 2px;
-
-  &.level-0 {
-    background: var(--card-border);
-  }
-
-  &.level-1 {
-    background: oklch(55% 0.08 55);
-  }
-
-  &.level-2 {
-    background: oklch(45% 0.1 55);
-  }
-
-  &.level-3 {
-    background: oklch(35% 0.1 55);
-  }
-
-  &.level-4 {
-    background: oklch(25% 0.08 55);
-  }
-
-  &.level-empty {
-    background: transparent;
   }
 }
 
@@ -753,8 +676,33 @@ body {
 
 .potty {
   grid-column: 3;
-  grid-row: 1 / -1;
+  grid-row: 1;
   min-height: 0;
+}
+
+.potty-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.potty-content[hidden] {
+  display: none;
+}
+
+.potty-toggle {
+  color: var(--text-dim);
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.potty-toggle[aria-expanded="true"] {
+  transform: rotate(180deg);
+}
+
+.potty:has(.potty-content[hidden]) {
+  align-self: start;
+  min-height: auto;
 }
 
 .potty-actions {
@@ -1038,20 +986,12 @@ body {
 /* Medium screens */
 
 @media (max-width: 1200px) and (min-width: 769px) {
-  .left-col {
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr auto 200px;
+  .dashboard {
+    grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr) minmax(190px, 0.8fr);
   }
 
   .hero {
-    grid-column: 1 / -1;
     grid-template-columns: auto 1fr;
-  }
-
-
-  .potty {
-    grid-column: 1 / -1;
-    max-height: 200px;
   }
 }
 
@@ -1079,8 +1019,7 @@ body {
     aspect-ratio: auto;
   }
 
-  .next-milestone,
-  .accident-tracker {
+  .next-milestone {
     text-align: center;
   }
 
@@ -1109,14 +1048,6 @@ body {
     font-size: 0.95rem;
   }
 
-  .accident-tracker .accident-text {
-    justify-content: center;
-  }
-
-  .streak-grid {
-    justify-content: center;
-  }
-
   .dashboard {
     display: flex;
     flex-direction: column;
@@ -1132,10 +1063,18 @@ body {
 
   .hero { order: 0; }
   .food { order: 1; }
-  .potty { order: 2; }
+  .weight { order: 2; min-height: 200px; }
   .events { order: 3; max-height: none; }
   .milestones { order: 4; min-height: auto; }
-  .weight { order: 5; min-height: 200px; }
+  .potty {
+    order: 5;
+    align-self: stretch;
+    width: 100%;
+  }
+
+  .potty:has(.potty-content[hidden]) {
+    align-self: stretch;
+  }
 
   .event-delete {
     opacity: 1;
