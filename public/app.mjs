@@ -1,11 +1,17 @@
 import { locales } from "./locale.mjs";
+import { FOOD_CONFIG, NUTRO_TABLE, dailyFoodPlan, foodToday } from "./food.mjs";
 
 if (!globalThis.Temporal) {
   const { Temporal } = await import("https://esm.sh/temporal-polyfill");
   globalThis.Temporal = Temporal;
 }
 
-const L = locales[new URLSearchParams(location.search).get("lang")] ?? locales.en;
+const params = new URLSearchParams(location.search);
+const L = locales[params.get("lang")] ?? locales.en;
+const requestedPreviewDays = Number(params.get("days"));
+const previewDays = Number.isInteger(requestedPreviewDays) && requestedPreviewDays >= 0 && requestedPreviewDays <= 36500
+  ? requestedPreviewDays : 0;
+const isPreview = previewDays > 0;
 
 // ============================================================
 // Configuration
@@ -13,26 +19,10 @@ const L = locales[new URLSearchParams(location.search).get("lang")] ?? locales.e
 
 const NNBSP = "\u202F"; // narrow no-break space (SI unit separator)
 
-const DAYS_PER_MONTH = 365.25 / 12;
-
-// Royal Canin JP: Mini Indoor Puppy
-const FOOD_TABLE = {
-  ageMonths: [2, 3, 4, 5, 6, 7, 8, 9, 10],
-  dryGramsByAdultKg: {
-    2: [50, 56, 57, 57, 49, 41, 41, 40, 40],
-    4: [81, 91, 95, 95, 87, 78, 69, 68, 67],
-  },
-};
-
 const CONFIG = {
   name: "Luna",
   birthday: "2025-12-21",
-  food: {
-    expectedAdultKg: 2.7,
-    waterTaperStartDay: 95,
-    waterTaperEndDay: 122,
-    initialWaterPerDry: 55 / 45,
-  },
+  food: FOOD_CONFIG,
   camera: {
     src: "luna-cam",
     apiURL: "http://cam.local",
@@ -54,7 +44,10 @@ const MILESTONES = [
   { ageWeeks: 18, label: "Ensure bite inhibition" },
   { ageWeeks: 24, label: "Spay eligible" },
   { ageWeeks: 26, label: "Adolescence begins / adult teeth fully in" },
-  { ageWeeks: 43, label: "Transition to adult food" },
+  {
+    ageDays: Temporal.PlainDate.from(CONFIG.birthday).until(CONFIG.food.switchStartDate).days,
+    label: "Start transition to adult food",
+  },
   { ageWeeks: 52, label: "Fully grown" },
 ];
 
@@ -69,11 +62,11 @@ function milestoneDays(m) {
 const BIRTHDAY = Temporal.PlainDate.from(CONFIG.birthday);
 
 function today() {
-  return Temporal.Now.plainDateISO();
+  return Temporal.PlainDate.from(foodToday()).add({ days: previewDays });
 }
 
 function now() {
-  return Temporal.Now.plainDateTimeISO();
+  return Temporal.Now.plainDateTimeISO(CONFIG.food.timeZone).add({ days: previewDays });
 }
 
 function age() {
@@ -94,6 +87,7 @@ async function apiGet(url) {
 }
 
 async function apiPost(url, body) {
+  if (isPreview) throw new Error("Cannot edit in a future preview");
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -103,6 +97,7 @@ async function apiPost(url, body) {
 }
 
 async function apiPatch(url, body) {
+  if (isPreview) throw new Error("Cannot edit in a future preview");
   const res = await fetch(url, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -112,6 +107,7 @@ async function apiPatch(url, body) {
 }
 
 async function apiDelete(url) {
+  if (isPreview) throw new Error("Cannot edit in a future preview");
   const res = await fetch(url, { method: "DELETE" });
   return res.json();
 }
@@ -136,6 +132,7 @@ function animateCount(el, target, decimals = 0) {
 }
 
 function updateAge() {
+  if (isPreview) document.querySelector("#date-preview span").textContent = L.datePreview(formatDate(today()));
   const a = age();
   const days = a.total({ unit: "days", relativeTo: BIRTHDAY });
   const weeks = Math.floor(a.total({ unit: "weeks", relativeTo: BIRTHDAY }));
@@ -202,125 +199,119 @@ function updateMilestones() {
 // Food
 // ============================================================
 
-function lerp(a, b, t) {
-  return a + (b - a) * t;
-}
+let currentFoodTransition;
+let foodActionPending = false;
 
-function clamp(x, lo, hi) {
-  return Math.max(lo, Math.min(hi, x));
-}
-
-function interp1d(xs, ys, x) {
-  if (x <= xs[0]) return ys[0];
-  if (x >= xs.at(-1)) return ys.at(-1);
-  for (let i = 0; i < xs.length - 1; i++) {
-    if (x <= xs[i + 1]) {
-      const t = (x - xs[i]) / (xs[i + 1] - xs[i]);
-      return lerp(ys[i], ys[i + 1], t);
-    }
+async function loadFoodTransition() {
+  try {
+    const res = await fetch("/api/food-transition");
+    if (!res.ok) throw new Error("Could not load food transition");
+    currentFoodTransition = await res.json();
+    document.getElementById("food-error").textContent = "";
+    updateFood();
+  } catch {
+    document.getElementById("food-error").textContent = L.foodLoadError;
+    document.querySelector(".food").classList.add("loaded");
   }
-  return ys.at(-1);
-}
-
-// Age in days vs percentage of adult weight for toy/small dog breeds (under 5kg)
-const SMALL_DOG_GROWTH_CURVE = [
-  { days: 0, pct: 0.10 },
-  { days: 30, pct: 0.18 },
-  { days: 60, pct: 0.35 },
-  { days: 90, pct: 0.50 },
-  { days: 120, pct: 0.65 },
-  { days: 150, pct: 0.78 },
-  { days: 180, pct: 0.88 },
-  { days: 210, pct: 0.94 },
-  { days: 240, pct: 0.97 },
-  { days: 270, pct: 0.99 },
-  { days: 365, pct: 1.00 }
-];
-
-function estimateAdultWeightKg() {
-  if (!currentWeights || currentWeights.length === 0) {
-    return CONFIG.food.expectedAdultKg;
-  }
-  const latest = currentWeights.at(-1);
-  const measurementDate = Temporal.PlainDate.from(latest.date);
-  const ageAtMeasurement = BIRTHDAY.until(measurementDate).total({ unit: "days", relativeTo: BIRTHDAY });
-  
-  const ageDaysArray = SMALL_DOG_GROWTH_CURVE.map(c => c.days);
-  const pctArray = SMALL_DOG_GROWTH_CURVE.map(c => c.pct);
-  const pct = interp1d(ageDaysArray, pctArray, ageAtMeasurement);
-  
-  return (latest.grams / 1000) / pct;
-}
-
-function dailyDryGrams(days) {
-  const ageMonths = days / DAYS_PER_MONTH;
-  const ages = FOOD_TABLE.ageMonths;
-  const g2 = interp1d(ages, FOOD_TABLE.dryGramsByAdultKg[2], ageMonths);
-  const g4 = interp1d(ages, FOOD_TABLE.dryGramsByAdultKg[4], ageMonths);
-  const expectedAdultKg = estimateAdultWeightKg();
-  const sizeT = clamp((expectedAdultKg - 2) / (4 - 2), 0, 1);
-  return Math.round(lerp(g2, g4, sizeT));
-}
-
-function waterPerDryGram(days) {
-  const { waterTaperStartDay, waterTaperEndDay, initialWaterPerDry } = CONFIG.food;
-  if (days <= waterTaperStartDay) return initialWaterPerDry;
-  if (days >= waterTaperEndDay) return 0;
-  const t = (days - waterTaperStartDay) / (waterTaperEndDay - waterTaperStartDay);
-  return initialWaterPerDry * (1 - t);
 }
 
 function updateFood() {
-  const days = ageDays();
-  const dry = dailyDryGrams(days);
-  const water = Math.round(dry * waterPerDryGram(days));
-  const total = dry + water;
+  if (currentFoodTransition === undefined || currentWeights === undefined) return;
+  const plan = dailyFoodPlan(today().toString(), CONFIG.birthday, currentWeights, currentFoodTransition);
   const container = document.getElementById("food-info");
-
-  let html =
-    '<div class="food-total">' + dry + NNBSP + 'g <span>' + L.dryPerDay + '</span></div>' +
-    '<div class="food-breakdown">';
-
-  if (water > 0) {
-    html +=
-      '<div class="food-component">' +
-        '<div class="food-amount">' + water + NNBSP + 'g</div>' +
-        '<div class="food-label">' + L.water + '</div>' +
-      '</div>' +
-      '<div class="food-component">' +
-        '<div class="food-amount">' + total + NNBSP + 'g</div>' +
-        '<div class="food-label">' + L.total + '</div>' +
-      '</div>';
+  if (plan === undefined) {
+    container.innerHTML = '<div class="food-note">' + L.foodNeedsWeight + '</div>';
+    document.querySelector(".food").classList.add("loaded");
+    return;
   }
 
+  let html =
+    '<div class="food-total">' + plan.totalGrams + NNBSP + 'g <span>' + L.dryPerDay +
+      ' · ' + plan.kcal + NNBSP + 'kcal</span></div>' +
+    '<div class="food-breakdown">';
+
+  if (plan.oldGrams > 0) {
+    html +=
+      '<div class="food-component">' +
+        '<div class="food-amount">' + plan.oldGrams + NNBSP + 'g</div>' +
+        '<div class="food-label">Royal Canin<br>Mini Indoor Puppy</div>' +
+      '</div>';
+  }
+  if (plan.newGrams > 0) {
+    html +=
+      '<div class="food-component">' +
+        '<div class="food-amount">' + plan.newGrams + NNBSP + 'g</div>' +
+        '<div class="food-label">Nutro Natural Choice<br>' + L.nutroRecipe + '</div>' +
+      '</div>';
+  }
   html += '</div>';
 
-  const expectedAdultKg = estimateAdultWeightKg();
-  html += '<div class="food-note">' + L.expectedAdultWeight(expectedAdultKg.toFixed(2)) + '</div>';
+  const status = plan.isBeforeSwitch
+    ? L.foodSwitchStarts(formatDate(CONFIG.food.switchStartDate), CONFIG.food.switchDays, formatDate(plan.fullDate))
+    : plan.isPaused
+      ? L.foodHeld(plan.day, CONFIG.food.switchDays)
+      : plan.day < CONFIG.food.switchDays
+        ? L.foodTransition(plan.day, CONFIG.food.switchDays, formatDate(plan.fullDate))
+        : L.foodComplete;
+  html += '<div class="food-note">' + status + '</div>';
+  html += '<div class="food-note">' + L.foodEstimate(plan.expectedCurrentKg.toFixed(2)) +
+    ' · <a href="' + NUTRO_TABLE.sourceURL + '" target="_blank" rel="noopener">' + L.foodTarget(plan.newTargetGrams) + '</a></div>';
 
-  if (days / DAYS_PER_MONTH >= 10) {
-    html += '<div class="food-note">' + L.switchToAdultFood + '</div>';
+  if (!plan.isBeforeSwitch) {
+    const disabled = foodActionPending || isPreview ? ' disabled' : '';
+    html += '<div class="food-controls">' +
+      '<button type="button" data-food-action="back"' + (plan.day === 0 ? ' disabled' : disabled) + '>' + L.foodBack + '</button>';
+    if (plan.day < CONFIG.food.switchDays || plan.isPaused) {
+      html += '<button type="button" data-food-action="' + (plan.isPaused ? 'resume' : 'hold') + '"' + disabled + '>' +
+        (plan.isPaused ? L.foodResume : L.foodHold) + '</button>';
+    }
+    html += '</div>';
   }
 
   container.innerHTML = html;
+  document.querySelector(".food").classList.add("loaded");
+}
+
+function setupFoodControls() {
+  document.getElementById("food-info").addEventListener("click", async e => {
+    const button = e.target.closest("button[data-food-action]");
+    if (!button || foodActionPending || isPreview) return;
+    foodActionPending = true;
+    updateFood();
+    try {
+      const res = await fetch("/api/food-transition", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: button.dataset.foodAction }),
+      });
+      if (!res.ok) throw new Error("Could not save food transition");
+      currentFoodTransition = await res.json();
+      document.getElementById("food-error").textContent = "";
+    } catch {
+      document.getElementById("food-error").textContent = L.foodSaveError;
+    } finally {
+      foodActionPending = false;
+      updateFood();
+    }
+  });
 }
 
 // ============================================================
 // Weight
 // ============================================================
 
-let currentWeights = [];
+let currentWeights;
 
 async function loadWeights() {
   currentWeights = await apiGet("/api/weights");
   renderWeights();
-  updateFood();
   document.querySelector(".weight").classList.add("loaded");
 }
 
 function renderWeights() {
   drawWeightChart(currentWeights);
   renderWeightEntries(currentWeights);
+  updateFood();
 }
 
 function renderWeightEntries(weights) {
@@ -340,6 +331,7 @@ function renderWeightEntries(weights) {
     valSpan.textContent = w.grams + NNBSP + "g";
 
     const btn = document.createElement("button");
+    btn.disabled = isPreview;
     btn.textContent = "×";
     btn.addEventListener("click", () => deleteWeight(w.date));
 
@@ -351,7 +343,6 @@ function renderWeightEntries(weights) {
 async function deleteWeight(date) {
   currentWeights = await apiDelete("/api/weights/" + date);
   renderWeights();
-  updateFood();
 }
 
 function plainDateToEpochDay(isoStr) {
@@ -504,6 +495,7 @@ function renderEvents() {
     titleSpan.textContent = e.title;
 
     const btn = document.createElement("button");
+    btn.disabled = isPreview;
     btn.className = "event-delete";
     btn.textContent = "×";
     btn.addEventListener("click", () => deleteEvent(e.id));
@@ -935,11 +927,13 @@ function renderPottyEntries() {
     }
 
     const editBtn = document.createElement("button");
+    editBtn.disabled = isPreview;
     editBtn.className = "potty-edit";
     editBtn.textContent = "✎";
     editBtn.addEventListener("click", () => editPottyEntry(e, row));
 
     const delBtn = document.createElement("button");
+    delBtn.disabled = isPreview;
     delBtn.textContent = "×";
     delBtn.addEventListener("click", () => deletePottyEntry(e.id));
 
@@ -1160,7 +1154,6 @@ function setupForms() {
     if (!date || !grams) return;
     currentWeights = await apiPost("/api/weights", { date, grams });
     renderWeights();
-    updateFood();
     document.getElementById("weight-grams").value = "";
     document.getElementById("weight-date").value = today().toString();
   });
@@ -1245,21 +1238,35 @@ ageUnits[0].textContent = L.daysLabel;
 ageUnits[1].textContent = L.weeksLabel;
 ageUnits[2].textContent = L.monthsLabel;
 
+if (isPreview) {
+  document.getElementById("date-preview").hidden = false;
+  const todayURL = new URL(location.href);
+  todayURL.searchParams.delete("days");
+  const link = document.querySelector("#date-preview a");
+  link.href = todayURL.href;
+  link.textContent = L.backToToday;
+  for (const control of document.querySelectorAll(".add-form input, .add-form button, .potty-actions button, .potty-options input, .potty-options button")) {
+    control.disabled = true;
+  }
+}
+
 pickTitle();
 setInterval(pickTitle, CONFIG.titleRotateMS);
 updateAge();
 updateMilestones();
 updateFood();
+setupFoodControls();
 setupForms();
 setupPottyButtons();
 setupCameraLightbox();
 
-for (const el of document.querySelectorAll(".hero, .food, .milestones")) {
+for (const el of document.querySelectorAll(".hero, .milestones")) {
   el.classList.add("loaded");
 }
 
 await Promise.all([
   loadWeights(),
+  loadFoodTransition(),
   loadEvents(),
   loadPottyLog(),
 ]);
@@ -1275,6 +1282,7 @@ setInterval(() => {
 setInterval(() => {
   checkForDeploy();
   loadWeights();
+  loadFoodTransition();
   loadEvents();
   loadPottyLog();
 }, CONFIG.dataRefreshMS);
@@ -1286,6 +1294,7 @@ window.addEventListener("pageshow", (e) => {
   if (!e.persisted) return;
   checkForDeploy();
   loadWeights().catch(() => {});
+  loadFoodTransition();
   loadEvents().catch(() => {});
   loadPottyLog().catch(() => {});
 });

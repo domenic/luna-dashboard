@@ -18,8 +18,6 @@ const en = {
   today: "today",
   tomorrow: "tomorrow",
   midnight: "midnight",
-  water: "water",
-  total: "total",
   dryPerDay: "dry / day",
   connecting: "Connecting\u2026",
 
@@ -28,8 +26,23 @@ const en = {
     "Next: <strong>" + label + "</strong> in " + enDuration.format({ days: n }),
   allMilestonesReached: "All milestones reached!",
   note: "Note",
-  switchToAdultFood: "Switch to adult food table",
-  expectedAdultWeight: (weight) => "Expected adult weight: " + weight + " kg",
+  datePreview: (date) => "Preview · " + date,
+  backToToday: "Back to today",
+  nutroRecipe: "Adult lamb & brown rice",
+  foodSwitchStarts: (date, days, fullDate) =>
+    days + "-day switch starts " + date + " · all Nutro " + fullDate,
+  foodTransition: (day, days, date) =>
+    "Day " + day + "/" + days + " · all Nutro " + date,
+  foodHeld: (day, days) => "Holding day " + day + "/" + days,
+  foodComplete: "All Nutro · transition complete",
+  foodBack: "Previous mix & hold",
+  foodHold: "Hold this mix",
+  foodResume: "Resume tomorrow",
+  foodEstimate: (kg) => "Est. weight: " + kg + " kg",
+  foodNeedsWeight: "Add a weight to calculate food.",
+  foodTarget: (grams) => "Nutro: " + grams + " g/day",
+  foodLoadError: "Could not load the feeding plan.",
+  foodSaveError: "Could not save the change. Try again.",
 
   // Stats
   poopsToday: (n) => "Poops today: " + n,
@@ -58,6 +71,7 @@ const en = {
   chartDaysAgo: (n) => (n === 0 ? "0" : "-" + n + "d"),
 };
 
+// English with Japanese shorthand for compact units, labels, and dates.
 const enXWaei = {
   ...en,
 
@@ -75,9 +89,8 @@ const enXWaei = {
   today: "今日",
   tomorrow: "明日",
   midnight: "0時",
-  water: "水",
   dryPerDay: "dry / 日",
-  expectedAdultWeight: (weight) => "予想成犬体重: " + weight + " kg",
+  foodTarget: (grams) => "Nutro: " + grams + " g/日",
 
   nextMilestone: (label, n) =>
     "次: <strong>" + label + "</strong> " + n + "日後",

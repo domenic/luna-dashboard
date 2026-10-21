@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { readFile, writeFile, access } from "fs/promises";
 import { join } from "path";
+import { changeFoodTransition, foodToday } from "./public/food.mjs";
 
 const DATA_PATH = process.env.DATA_PATH || join(import.meta.dirname, "data.json");
 const BUILD_ID = Date.now().toString(36);
@@ -30,6 +31,23 @@ async function readData() {
 async function writeData(data) {
   await writeFile(DATA_PATH, JSON.stringify(data, undefined, 2) + "\n");
 }
+
+// Food transition progress is shared between devices and survives restarts.
+app.get("/api/food-transition", async (c) => {
+  const data = await readData();
+  return c.json(data.foodTransition ?? {});
+});
+
+app.post("/api/food-transition", async (c) => {
+  const { action } = await c.req.json();
+  if (!["hold", "back", "resume"].includes(action)) {
+    return c.json({ error: "Invalid food transition action" }, 400);
+  }
+  const data = await readData();
+  data.foodTransition = changeFoodTransition(foodToday(), data.foodTransition ?? {}, action);
+  await writeData(data);
+  return c.json(data.foodTransition);
+});
 
 // Weights
 app.get("/api/weights", async (c) => {
