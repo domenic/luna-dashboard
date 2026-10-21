@@ -48,7 +48,7 @@ body {
 .left-col {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 200px;
+  grid-template-rows: 1fr 300px;
   gap: 1rem;
   min-height: 0;
 
@@ -370,6 +370,11 @@ body {
 
 .food {
   flex: 1;
+  overflow-y: auto;
+
+  > * {
+    flex-shrink: 0;
+  }
 }
 
 .food-total {
@@ -386,8 +391,9 @@ body {
 }
 
 .food-breakdown {
-  display: flex;
-  gap: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
 }
 
 .food-component {
@@ -407,6 +413,53 @@ body {
   font-size: 0.75rem;
   color: var(--text-dim);
   font-style: italic;
+
+  a {
+    color: inherit;
+  }
+}
+
+.food-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+
+  button {
+    padding: 0.3rem 0.5rem;
+    border: 1px solid var(--card-border);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+    font-size: 0.75rem;
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+  }
+}
+
+#food-error {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--red);
+  line-height: 1.5;
+
+  &:empty {
+    display: none;
+  }
+}
+
+#date-preview {
+  color: var(--accent);
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+
+  a {
+    color: inherit;
+  }
 }
 
 /* Weight */

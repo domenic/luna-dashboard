@@ -2,7 +2,9 @@
   "name": "luna-dashboard",
   "private": true,
   "scripts": {
+    "dev": "node --watch --env-file-if-exists=.env server.mjs",
     "start": "node --env-file-if-exists=.env server.mjs",
+    "test": "node --test",
     "get-data": "curl -s -o data.json http://luna.local/data.json"
   },
   "dependencies": {
